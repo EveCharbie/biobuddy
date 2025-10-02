@@ -36,7 +36,7 @@ class Body:
         mass: float,
         inertia: np.ndarray,
         mass_center: np.ndarray,
-        wrap: bool,
+        wrapping: list,
         socket_frame: str,
         markers: list,
         mesh: list,
@@ -49,7 +49,7 @@ class Body:
         self.mass = mass
         self.inertia = inertia
         self.mass_center = mass_center
-        self.wrap = wrap
+        self.wrapping = wrapping
         self.socket_frame = socket_frame
         self.markers = markers
         self.mesh = mesh
@@ -70,10 +70,7 @@ class Body:
             socket_frame = geometry.find("socket_frame").text.split("/")[-1]
             if socket_frame == "..":
                 socket_frame = name
-
-        wrap = False
-        if element.find("WrapObjectSet") is not None:
-            wrap = len(element.find("WrapObjectSet").text) != 0
+        wrapping = find_in_tree(element, "WrapObjectSet")
 
         mesh = []
         virtual_body = []
@@ -101,7 +98,7 @@ class Body:
             mass=mass,
             inertia=inertia,
             mass_center=mass_center,
-            wrap=wrap,
+            wrapping=wrapping,
             socket_frame=socket_frame,
             markers=[],
             mesh=mesh,

@@ -83,7 +83,7 @@ class ViaPointReal:
         self._muscle_group = value
 
     @property
-    def position(self) -> np.ndarray:
+    def position(self) -> Points:
         return self._position
 
     @position.setter

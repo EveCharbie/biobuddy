@@ -443,6 +443,30 @@ class OsimModelParser:
             muscle_group_name = muscle.muscle_group
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
+    def _add_wrapping_objects_to_muscles(self, wrapping_objects: list[WrappingObject]):
+        # Add wrapping objects to the muscle they belong to
+        for wrapping_object in wrapping_objects:
+            parent_segment_name = wrapping_object.muscle
+            if parent_segment_name in self.biomechanical_model_real.segments.keys():
+                # Convert position string to numpy array with proper float conversion
+                position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
+
+                # Create MarkerReal instance
+                marker_real = MarkerReal(
+                    name=marker.name,
+                    parent_name=parent_segment_name,
+                    position=position,
+                    is_technical=True,
+                    is_anatomical=False,
+                )
+
+                # Add to parent segment
+                self.biomechanical_model_real.segments[parent_segment_name].add_marker(marker_real)
+            else:
+                self.warnings.append(
+                    f"Marker {marker.name} references unknown parent segment {parent_segment_name}, skipping"
+                )
+
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
         rt_matrix = RotoTransMatrix()
@@ -872,6 +896,7 @@ class OsimModelParser:
             return bodies
 
     def _get_force_set(self) -> tuple[list[MuscleGroupReal], list[MuscleReal]]:
+        # TODO: implement the via points following the logic of _add_markers_to_segments
         muscle_groups = []
         muscles = []
         if is_element_empty(self.forceset_elt):

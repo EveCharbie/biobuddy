@@ -212,7 +212,9 @@ def create_planar_model(
     )
     # TODO: wrapping objects -> via points
     # Fix the via points before translating to biomod as there are some conditional and moving via points
-    model.fix_via_points(q=np.zeros((model.nb_q,)))
+    hand_on_handle_posture = np.zeros(np.array([0.7, 1.9]))
+    model.fix_via_points(q=hand_on_handle_posture)
+    model.approximate_wrapping_objects_with_via_points(q=hand_on_handle_posture)
 
     # Removing unused segments
     for segment in segments_to_remove:
@@ -277,6 +279,8 @@ def create_planar_model(
     # And convert it to a .bioMod file
     model.to_biomod(biomod_filepath, with_mesh=with_mesh)
 
+
+###### TODO: test this example ######
 
 def main():
 

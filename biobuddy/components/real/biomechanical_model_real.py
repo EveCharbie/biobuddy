@@ -321,6 +321,20 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
                         muscle.via_points[via_point.name].movement = None
 
+
+    def approximate_wrapping_objects_with_via_points(self):
+        """
+        This function allows to find the via points (two per joint) that best replicate the behavior of muscle along
+        wrapping objects. The optimization procedure from Livet et al. 2022 (https://doi.org/10.1115/1.4051870) is used
+        for each wrapping object present in the model. This is useful to reduce modeling complexity. It is also useful
+        when using biorbd as wrapping objects are not implement in biorbd yet.
+        Note: This is a destructive operation: once the wrapping objects are transformed into via points, it cannot be
+        reverted.
+        """
+        # TODO: implement this function
+        pass
+
+
     def from_biomod(
         self,
         filepath: str,

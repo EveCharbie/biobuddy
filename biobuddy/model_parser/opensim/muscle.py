@@ -5,6 +5,7 @@ from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree
 from .path_point import PathPoint, PathPointMovement, PathPointCondition
+from .wrapping_object import wrapping_object_from_element
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
@@ -21,18 +22,18 @@ OPENSIM_MUSCLE_TYPE = {
 
 
 def check_for_wrappings(element: etree.ElementTree, name: str) -> str:
-    wrap = False
     warnings = ""
     if element.find("GeometryPath").find("PathWrapSet") is not None:
-        try:
-            wrap_tp = element.find("GeometryPath").find("PathWrapSet")[0].text
-        except:
-            wrap_tp = 0
-        n_wrap = 0 if not wrap_tp else len(wrap_tp)
-        wrap = n_wrap != 0
-    if wrap:
-        warnings += f"Some wrapping objects were present on the muscle {name} in the original file force set.\nWraping objects are not supported yet so they will be ignored."
-    return warnings
+        wrap_elements = element.find("GeometryPath").find("PathWrapSet")
+        if wrap_elements is None:
+            return None, warnings
+    if find_in_tree(element, "PathWrap") is not None:
+        path_wrap = PathWrap.from_element(find_in_tree(element, "PathWrap"))
+    for wrap_elt in find_in_tree(wrap_elements, "WrapEllipsoid"):
+        wrapping_object, warning = wrapping_object_from_element(wrap_elt)
+        if warning != "":
+            warnings += warning
+    return path_wrap, warnings
 
 
 def check_for_unsupported_elements(element: etree.ElementTree, name: str) -> str:
@@ -67,7 +68,7 @@ def get_muscle_from_element(
     TODO: Better handle ignore_applied parameter. MuscleReal should have a applied parameter, a remove_unapplied_muscle method, and we should remove unapplied muscles in to_biomod.
     """
     name = (element.attrib["name"]).split("/")[-1]
-    warnings = check_for_wrappings(element, name) + check_for_unsupported_elements(element, name)
+    warnings = check_for_unsupported_elements(element, name)
     # muscle_type = OPENSIM_MUSCLE_TYPE[element.tag]  # TODO: We should try to match OpenSim muscle types
     muscle_type = muscle_type
 
@@ -86,7 +87,7 @@ def get_muscle_from_element(
     maximal_velocity = find_in_tree(element, "max_contraction_velocity")
     maximal_velocity = float(maximal_velocity) if maximal_velocity else 10.0
 
-    origin_or_insertion_problem = False
+    # Via points
     path_points: list[PathPoint] = []
     via_points: list[PathPoint] = []
     path_point_elts = find_sub_elements_in_tree(
@@ -127,19 +128,20 @@ def get_muscle_from_element(
         via_points.append(via_point)
         path_points.append(via_point)
 
+    # Wrapping objects
+    warnings = check_for_wrappings(element, name)
+
+    # Muscle groups
     muscle_group_name = f"{path_points[0].body}_to_{path_points[-1].body}"
-    try:
-        muscle_group = MuscleGroupReal(
-            name=muscle_group_name,
-            origin_parent_name=path_points[0].body,
-            insertion_parent_name=path_points[-1].body,
-        )
-    except Exception as e:
-        # This error is raised when the origin and insertion parent names are the same which is accepted in OpenSim.
-        warnings += (
-            f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
-        )
+    if path_points[0].body == path_points[-1].body:
+        warnings += f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name} as the origin and insertion parent names cannot be the same.\n"
         return None, None, warnings
+
+    muscle_group = MuscleGroupReal(
+        name=muscle_group_name,
+        origin_parent_name=path_points[0].body,
+        insertion_parent_name=path_points[-1].body,
+    )
 
     for via_point in via_points:
         via_point.muscle_group = muscle_group_name
