@@ -130,7 +130,7 @@ class WrappingEllipsoid(WrappingObjectReal):
         self.rotation = rotation
 
 
-
+# Code translated from opensim-core/OpenSim/Simulation/Wrap/WrapEllipsoid.cpp with Claude (not verified)
 # import numpy as np
 # from enum import IntEnum
 #
@@ -142,19 +142,30 @@ class WrappingEllipsoid(WrappingObjectReal):
 # NUM_FAN_SAMPLES = 300
 # SV_BOUNDARY_BLEND = 0.3
 #
+#
 # class WrapAction(IntEnum):
 #     """Enum for wrap action results"""
 #     noWrap = 0
 #     insideRadius = 1
 #     mandatoryWrap = 2
 #
+#
+# class PathWrapMethod(IntEnum):
+#     """Wrapping method enum"""
+#     hybrid = 0
+#     midpoint = 1
+#     axial = 2
+#
+#
 # def EQUAL_WITHIN_ERROR(a, b, tolerance=ELLIPSOID_TOLERANCE_1):
 #     """Check if two values are equal within tolerance"""
 #     return abs(a - b) < tolerance
 #
+#
 # def DSIGN(x):
 #     """Return sign of x as +1 or -1"""
 #     return 1 if x >= 0 else -1
+#
 #
 # def normalize_or_zero(v):
 #     """Normalize vector or return zero if magnitude is too small"""
@@ -163,8 +174,10 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         return np.zeros_like(v)
 #     return v / norm
 #
+#
 # class WrapResult:
 #     """Container for wrapping results"""
+#
 #     def __init__(self):
 #         self.r1 = np.zeros(3)
 #         self.r2 = np.zeros(3)
@@ -173,6 +186,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         self.factor = 1.0
 #         self.wrap_pts = []
 #         self.wrap_path_length = 0.0
+#
 #
 # class WrapEllipsoid:
 #     """
@@ -245,8 +259,8 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         p1e = -1.0
 #         p2e = -1.0
 #         for i in range(3):
-#             p1e += ((p1[i] - m[i]) / a[i])**2
-#             p2e += ((p2[i] - m[i]) / a[i])**2
+#             p1e += ((p1[i] - m[i]) / a[i]) ** 2
+#             p2e += ((p2[i] - m[i]) / a[i]) ** 2
 #
 #         # Check if points are inside ellipsoid
 #         if p1e < -0.0001 or p2e < -0.0001:
@@ -277,7 +291,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         aa = np.dot(f1, f1)
 #         bb = 2.0 * np.dot(f1, f2)
 #         cc = np.dot(f2, f2) - 1.0
-#         disc = bb**2 - 4.0 * aa * cc
+#         disc = bb ** 2 - 4.0 * aa * cc
 #
 #         if disc < 0.0:
 #             flag = False
@@ -315,7 +329,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             t[i] = (m[i] - result.r1[i]) / r1r2[i]
 #             t_sv[i] = result.r1 + t[i] * r1r2
 #             t_c1[i] = self.find_closest_point(a[0], a[1], a[2],
-#                                              t_sv[i][0], t_sv[i][1], t_sv[i][2], i)
+#                                               t_sv[i][0], t_sv[i][1], t_sv[i][2], i)
 #
 #         # Pick most parallel major axis
 #         bestMu = np.argmax(mu)
@@ -349,7 +363,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                     tt = i / NUM_FAN_SAMPLES
 #                     t_sv[0] = result.r1 + tt * r1r2
 #                     t_c1[0] = self.find_closest_point(a[0], a[1], a[2],
-#                                                      t_sv[0][0], t_sv[0][1], t_sv[0][2])
+#                                                       t_sv[0][0], t_sv[0][1], t_sv[0][2])
 #                     v = t_c1[0] - t_sv[0]
 #                     v = normalize_or_zero(v)
 #                     v_sum += v
@@ -366,7 +380,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                     tt = (mu[bestMu] - MU_BLEND_MIN) / (MU_BLEND_MAX - MU_BLEND_MIN)
 #                     oneMinusT = 1.0 - tt
 #                     t_c1[1] = self.find_closest_point(a[0], a[1], a[2],
-#                                                      t_c1[0][0], t_c1[0][1], t_c1[0][2])
+#                                                       t_c1[0][0], t_c1[0][1], t_c1[0][2])
 #                     t_c1[2] = tt * result.c1 + oneMinusT * t_c1[1]
 #                     result.sv = tt * result.sv + oneMinusT * t_sv[2]
 #                     result.c1 = self.find_closest_point(a[0], a[1], a[2],
@@ -375,7 +389,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         else:  # midpoint method
 #             result.sv = result.r1 + 0.5 * (result.r2 - result.r1)
 #             result.c1 = self.find_closest_point(a[0], a[1], a[2],
-#                                                result.sv[0], result.sv[1], result.sv[2])
+#                                                 result.sv[0], result.sv[1], result.sv[2])
 #
 #         # Initialize tangent points from c1
 #         use_c1_to_find_tangent_pts = True
@@ -420,7 +434,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         # Calculate path on ellipsoid
 #         far_side_wrap = False
 #         self.calc_distance_on_ellipsoid(result.r1, result.r2, m, a, vs, vs4,
-#                                        far_side_wrap, result)
+#                                         far_side_wrap, result)
 #
 #         # Check for wrong-way wrap
 #         if self._wrapSign != 0 and len(result.wrap_pts) > 2 and not far_side_wrap:
@@ -435,7 +449,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             if np.dot(r1p1, r1w1) > 0.0 or np.dot(r2p2, r2w2) > 0.0:
 #                 far_side_wrap = True
 #                 self.calc_distance_on_ellipsoid(result.r1, result.r2, m, a, vs, vs4,
-#                                                far_side_wrap, result)
+#                                                 far_side_wrap, result)
 #
 #         # Unfactor coordinates
 #         result.wrap_path_length /= result.factor
@@ -451,16 +465,16 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             r1[:] = p1
 #             return 1
 #
-#         nr1 = 2.0 * (r1 - m) / (a**2)
+#         nr1 = 2.0 * (r1 - m) / (a ** 2)
 #         d1 = -np.dot(nr1, r1)
 #
 #         ee = np.zeros(4)
 #         ee[0] = np.dot(vs, r1) + vs4
-#         ee[1] = -1.0 + np.sum(((r1 - m) / a)**2)
+#         ee[1] = -1.0 + np.sum(((r1 - m) / a) ** 2)
 #         ee[2] = np.dot(nr1, r1) + d1
 #         ee[3] = np.dot(nr1, p1) + d1
 #
-#         ssqo = np.sum(ee**2)
+#         ssqo = np.sum(ee ** 2)
 #         ssq = ssqo
 #
 #         nit = 0
@@ -475,9 +489,9 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             dedth = np.zeros((4, 4))
 #             for i in range(3):
 #                 dedth[i, 0] = vs[i]
-#                 dedth[i, 1] = 2.0 * (r1[i] - m[i]) / a[i]**2
-#                 dedth[i, 2] = 2.0 * (2.0 * r1[i] - m[i]) / a[i]**2
-#                 dedth[i, 3] = 2.0 * p1[i] / a[i]**2
+#                 dedth[i, 1] = 2.0 * (r1[i] - m[i]) / a[i] ** 2
+#                 dedth[i, 2] = 2.0 * (2.0 * r1[i] - m[i]) / a[i] ** 2
+#                 dedth[i, 3] = 2.0 * p1[i] / a[i] ** 2
 #             dedth[3, 0] = 0.0
 #             dedth[3, 1] = 0.0
 #             dedth[3, 2] = 1.0
@@ -505,14 +519,14 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 r1[:3] += vt[:3]
 #                 d1 += vt[3]
 #
-#                 nr1 = 2.0 * (r1 - m) / (a**2)
+#                 nr1 = 2.0 * (r1 - m) / (a ** 2)
 #                 ee[0] = np.dot(vs, r1) + vs4
-#                 ee[1] = -1.0 + np.sum(((r1 - m) / a)**2)
+#                 ee[1] = -1.0 + np.sum(((r1 - m) / a) ** 2)
 #                 ee[2] = np.dot(nr1, r1) + d1
 #                 ee[3] = np.dot(nr1, p1) + d1
 #
 #                 ssqo = ssq
-#                 ssq = np.sum(ee**2)
+#                 ssq = np.sum(ee ** 2)
 #                 alpha *= 4.0
 #                 nit2 += 1
 #
@@ -525,26 +539,26 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 r1[:3] += vt[:3] * fakt
 #                 d1 += vt[3] * fakt
 #
-#                 nr1 = 2.0 * (r1 - m) / (a**2)
+#                 nr1 = 2.0 * (r1 - m) / (a ** 2)
 #                 ee[0] = np.dot(vs, r1) + vs4
-#                 ee[1] = -1.0 + np.sum(((r1 - m) / a)**2)
+#                 ee[1] = -1.0 + np.sum(((r1 - m) / a) ** 2)
 #                 ee[2] = np.dot(nr1, r1) + d1
 #                 ee[3] = np.dot(nr1, p1) + d1
 #
 #                 ssqo = ssq
-#                 ssq = np.sum(ee**2)
+#                 ssq = np.sum(ee ** 2)
 #                 nit2 += 1
 #
 #             r1[:3] -= vt[:3] * fakt
 #             d1 -= vt[3] * fakt
 #
-#             nr1 = 2.0 * (r1 - m) / (a**2)
+#             nr1 = 2.0 * (r1 - m) / (a ** 2)
 #             ee[0] = np.dot(vs, r1) + vs4
-#             ee[1] = -1.0 + np.sum(((r1 - m) / a)**2)
+#             ee[1] = -1.0 + np.sum(((r1 - m) / a) ** 2)
 #             ee[2] = np.dot(nr1, r1) + d1
 #             ee[3] = np.dot(nr1, p1) + d1
 #
-#             ssq = np.sum(ee**2)
+#             ssq = np.sum(ee ** 2)
 #             ssqo = ssq
 #
 #         return 1
@@ -598,8 +612,8 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         for i in range(num_interior_pts):
 #             phi = (i + 1) * dphi
 #             rphi = np.array([[np.cos(phi), -np.sin(phi), 0],
-#                             [np.sin(phi), np.cos(phi), 0],
-#                             [0, 0, 1]])
+#                              [np.sin(phi), np.cos(phi), 0],
+#                              [0, 0, 1]])
 #
 #             t = rphi @ ux
 #             r = r0 @ t
@@ -609,7 +623,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             aa = np.dot(f1, f1)
 #             bb = 2.0 * np.dot(f1, f2)
 #             cc = np.dot(f2, f2) - 1.0
-#             mu3 = (-bb + np.sqrt(bb**2 - 4.0 * aa * cc)) / (2.0 * aa)
+#             mu3 = (-bb + np.sqrt(bb ** 2 - 4.0 * aa * cc)) / (2.0 * aa)
 #
 #             s.append(a0 + mu3 * r)
 #
@@ -617,7 +631,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #
 #         result.wrap_path_length = 0.0
 #         for i in range(num_path_segments):
-#             dv = result.wrap_pts[i+1] - result.wrap_pts[i]
+#             dv = result.wrap_pts[i + 1] - result.wrap_pts[i]
 #             result.wrap_path_length += np.linalg.norm(dv)
 #
 #     def find_closest_point(self, a, b, c, u, v, w, special_case_axis=-1):
@@ -651,12 +665,12 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             return np.array([x, y, z])
 #
 #         # General case
-#         a2, b2, c2 = a*a, b*b, c*c
-#         u2, v2, w2 = u*u, v*v, w*w
-#         a2u2, b2v2, c2w2 = a2*u2, b2*v2, c2*w2
+#         a2, b2, c2 = a * a, b * b, c * c
+#         u2, v2, w2 = u * u, v * v, w * w
+#         a2u2, b2v2, c2w2 = a2 * u2, b2 * v2, c2 * w2
 #
 #         # Initial guess
-#         if (u/a)**2 + (v/b)**2 + (w/c)**2 < 1.0:
+#         if (u / a) ** 2 + (v / b) ** 2 + (w / c) ** 2 < 1.0:
 #             t = 0.0
 #         else:
 #             max_dim = max(a, b, c)
@@ -667,9 +681,9 @@ class WrappingEllipsoid(WrappingObjectReal):
 #             P = t + a2
 #             Q = t + b2
 #             R = t + c2
-#             P2, Q2, R2 = P*P, Q*Q, R*R
+#             P2, Q2, R2 = P * P, Q * Q, R * R
 #
-#             f = P2*Q2*R2 - a2u2*Q2*R2 - b2v2*P2*R2 - c2w2*P2*Q2
+#             f = P2 * Q2 * R2 - a2u2 * Q2 * R2 - b2v2 * P2 * R2 - c2w2 * P2 * Q2
 #
 #             if abs(f) < 1e-09:
 #                 x = a2 * u / P
@@ -677,9 +691,9 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 z = c2 * w / R
 #                 return np.array([x, y, z])
 #
-#             PQ, PR, QR = P*Q, P*R, Q*R
-#             PQR = P*Q*R
-#             fp = 2.0 * (PQR*(QR+PR+PQ) - a2u2*QR*(Q+R) - b2v2*PR*(P+R) - c2w2*PQ*(P+Q))
+#             PQ, PR, QR = P * Q, P * R, Q * R
+#             PQR = P * Q * R
+#             fp = 2.0 * (PQR * (QR + PR + PQ) - a2u2 * QR * (Q + R) - b2v2 * PR * (P + R) - c2w2 * PQ * (P + Q))
 #
 #             t -= f / fp
 #
@@ -694,9 +708,9 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         Find closest point on 2D ellipse to a point.
 #         Direct translation from OpenSim (Dave Eberly's algorithm).
 #         """
-#         a2, b2 = a*a, b*b
-#         u2, v2 = u*u, v*v
-#         a2u2, b2v2 = a2*u2, b2*v2
+#         a2, b2 = a * a, b * b
+#         u2, v2 = u * u, v * v
+#         a2u2, b2v2 = a2 * u2, b2 * v2
 #
 #         near_x_origin = EQUAL_WITHIN_ERROR(0.0, u)
 #         near_y_origin = EQUAL_WITHIN_ERROR(0.0, v)
@@ -713,7 +727,7 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 return x, y, b
 #
 #         if near_x_origin:
-#             if a >= b or abs(v) >= b - a2/b:
+#             if a >= b or abs(v) >= b - a2 / b:
 #                 x = u
 #                 y = b if v >= 0 else -b
 #                 dy = y - v
@@ -722,11 +736,11 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 y = b2 * v / (b2 - a2)
 #                 dy = y - v
 #                 ydb = y / b
-#                 x = a * np.sqrt(abs(1 - ydb*ydb))
-#                 return x, y, np.sqrt(x*x + dy*dy)
+#                 x = a * np.sqrt(abs(1 - ydb * ydb))
+#                 return x, y, np.sqrt(x * x + dy * dy)
 #
 #         if near_y_origin:
-#             if b >= a or abs(u) >= a - b2/a:
+#             if b >= a or abs(u) >= a - b2 / a:
 #                 x = a if u >= 0 else -a
 #                 dx = x - u
 #                 y = v
@@ -735,11 +749,11 @@ class WrappingEllipsoid(WrappingObjectReal):
 #                 x = a2 * u / (a2 - b2)
 #                 dx = x - u
 #                 xda = x / a
-#                 y = b * np.sqrt(abs(1 - xda*xda))
-#                 return x, y, np.sqrt(dx*dx + y*y)
+#                 y = b * np.sqrt(abs(1 - xda * xda))
+#                 return x, y, np.sqrt(dx * dx + y * y)
 #
 #         # General case - Newton iteration
-#         if (u/a)**2 + (v/b)**2 < 1.0:
+#         if (u / a) ** 2 + (v / b) ** 2 < 1.0:
 #             t = 0.0
 #         else:
 #             max_dim = max(a, b)
@@ -748,10 +762,10 @@ class WrappingEllipsoid(WrappingObjectReal):
 #         for _ in range(64):
 #             P = t + a2
 #             Q = t + b2
-#             P2, Q2 = P*P, Q*Q
-#             f = P2*Q2 - a2u2*Q2 - b2v2*P2
+#             P2, Q2 = P * P, Q * Q
+#             f = P2 * Q2 - a2u2 * Q2 - b2v2 * P2
 #
 #             if abs(f) < 1e-09:
 #                 break
 #
-#             fp = 2.0 * (P*Q*(P+Q) - a2u2*Q
+#             fp = 2.0 * (P * Q * (P + Q) - a2u2 * Q - b2v2 * P)
