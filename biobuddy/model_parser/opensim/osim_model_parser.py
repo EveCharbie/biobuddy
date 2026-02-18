@@ -389,6 +389,7 @@ class OsimModelParser(AbstractModelParser):
             dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
             dof.parent_offset_trans, dof.parent_offset_rot = [0] * 3, [0] * 3
             dof.spatial_transform = []
+            dof.type = "Ground"
             self.write_dof(
                 Body.from_element(ground_set),
                 dof,
@@ -495,7 +496,7 @@ class OsimModelParser(AbstractModelParser):
             q_ranges_rot,
             rot_dof_names,
             default_value_rot,
-        ) = self._get_transformation_parameters(dof.spatial_transform)
+        ) = self._get_transformation_parameters(dof)
         trans_dof, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(
             trans_dof_names, q_ranges_trans
         )
@@ -542,12 +543,16 @@ class OsimModelParser(AbstractModelParser):
 
             # Rotations
             if len(rotations) != 0:
-                if is_ortho_basis(rotations):
+                if len(rotations) == 1 or is_ortho_basis(rotations):
+                    if len(rotations) == 1:
+                        axis = RotationMatrix()
+                    else:
+                        axis = RotationMatrix.from_rotation_matrix(np.array(rotations).T)
+
                     rot_axis, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(
                         rot_dof_names, q_ranges_rot
                     )
                     body_name = body.name + "_rotation_transform"
-                    axis = RotationMatrix.from_rotation_matrix(np.array(rotations).T)
                     axis_offset_rot_mat = RotationMatrix.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
                         axis=axis,
@@ -979,7 +984,27 @@ class OsimModelParser(AbstractModelParser):
 
             return
 
-    def _get_transformation_parameters(self, spatial_transform):
+    def _get_transformation_parameters(self, dof):
+        def get_q_range(coordinates):
+            if coordinates.range:
+                q_range = coordinates.range
+                if not coordinates.clamped:
+                    q_range = "// " + q_range
+            else:
+                q_range = None
+            return q_range
+
+        def get_dof_name(coordinates):
+            if coordinates.locked:
+                dof_name = None
+            elif coordinates.name is not None:
+                dof_name = coordinates.name
+            elif coordinates.coordinate_name is not None:
+                dof_name = coordinates.coordinate_name
+            else:
+                dof_name = None
+            return dof_name
+
         translations = []
         rotations = []
         q_ranges_trans = []
@@ -988,41 +1013,54 @@ class OsimModelParser(AbstractModelParser):
         default_value_rot = []
         rot_dof_names = []
         trans_dof_names = []
-        for transform in spatial_transform:
-            q_range = None
-            axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]
-            if transform.coordinate:
-                if transform.coordinate.range:
-                    q_range = transform.coordinate.range
-                    if not transform.coordinate.clamped:
-                        q_range = "// " + q_range
-                else:
-                    q_range = None
-                value = transform.coordinate.default_value
-                default_value = value if value else 0
-                if transform.coordinate.locked:
-                    dof_name = None
-                elif transform.coordinate.name is not None:
-                    dof_name = transform.coordinate.name
-                elif transform.coordinate.coordinate_name is not None:
-                    dof_name = transform.coordinate.coordinate_name
+        if dof.type == "CustomJoint":
+            for transform in dof.spatial_transform:
+                q_range = None
+                axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]
+                if transform.coordinate:
+                    q_range = get_q_range(transform.coordinate)
+                    value = transform.coordinate.default_value
+                    default_value = value if value else 0
+                    dof_name = get_dof_name(transform.coordinate)
                 else:
                     dof_name = None
-            else:
-                dof_name = None
-                default_value = 0
-            if transform.type == "translation":
-                translations.append(axis)
-                q_ranges_trans.append(q_range)
-                trans_dof_names.append(dof_name)
-                default_value_trans.append(default_value)
-            elif transform.type == "rotation":
-                rotations.append(axis)
-                q_ranges_rot.append(q_range)
-                rot_dof_names.append(dof_name)
-                default_value_rot.append(default_value)
-            else:
-                raise RuntimeError("Transform must be 'rotation' or 'translation'")
+                    default_value = 0
+                if transform.type == "translation":
+                    translations.append(axis)
+                    q_ranges_trans.append(q_range)
+                    trans_dof_names.append(dof_name)
+                    default_value_trans.append(default_value)
+                elif transform.type == "rotation":
+                    rotations.append(axis)
+                    q_ranges_rot.append(q_range)
+                    rot_dof_names.append(dof_name)
+                    default_value_rot.append(default_value)
+                else:
+                    raise RuntimeError("Transform must be 'rotation' or 'translation'")
+
+        elif dof.type == "WeldJoint":
+            pass
+
+        elif dof.type == "Ground":
+            pass
+
+        elif dof.type == "PinJoint":
+            coordinates = dof.coordinates[0]
+            q_range = get_q_range(coordinates)
+
+            value = coordinates.default_value
+            default_value = value if value else 0
+            dof_name = get_dof_name(coordinates)
+
+            axis = ["0", "0", "1"]
+            rotations.append(axis)
+            q_ranges_rot.append(q_range)
+            rot_dof_names.append(dof_name)
+            default_value_rot.append(default_value)
+
+        else:
+            raise NotImplementedError(f"Joint type {dof.type} not implemented yet. Only CustomJoint, WeldJoint and PinJoint are supported.")
+
         return (
             translations,
             q_ranges_trans,

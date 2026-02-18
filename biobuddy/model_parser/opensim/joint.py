@@ -13,6 +13,7 @@ class JointType(Enum):
     WELD_JOINT = "WeldJoint"
     CUSTOM_JOINT = "CustomJoint"
     GROUND = "Ground"  # This is not an actual joint, but it creates an empty Joint object
+    PIN_JOINT = "PinJoint"
 
 
 def _convert_offset_child(offset_child_rot, offset_child_trans):
