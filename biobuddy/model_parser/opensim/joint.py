@@ -90,16 +90,13 @@ class Joint:
 
         if element.find("SpatialTransform") is not None:
             for i, transform in enumerate(element.find("SpatialTransform").findall("TransformAxis")):
-                spat_transform = SpatialTransform.from_element(transform)
+                spat_transform = SpatialTransform.from_element(transform, parent_name)
                 if i < 3:
                     spat_transform.type = "rotation"
                 else:
                     spat_transform.type = "translation"
                 for coordinate in coordinates:
                     if coordinate.name == spat_transform.coordinate_name:
-                        # We extract the dof name and add the parent name as a prefix to ensure uniqueness
-                        dof_name = f"{parent_name}_{coordinate.name}"
-                        coordinate.name = dof_name
                         spat_transform.coordinate = coordinate
                 function = spat_transform.function
                 spatial_transform.append(spat_transform)

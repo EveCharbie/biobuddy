@@ -26,8 +26,11 @@ class Coordinate:
         else:
             clamped = find_in_tree(element, "clamped") == "true"
 
+        name = (element.attrib["name"]).split("/")[-1]
+        dof_name = f"{parent_name}_{name}"
+
         return Coordinate(
-            name=(element.attrib["name"]).split("/")[-1],
+            name=dof_name,
             default_value=find_in_tree(element, "default_value"),
             range=find_in_tree(element, "range"),
             clamped=clamped,

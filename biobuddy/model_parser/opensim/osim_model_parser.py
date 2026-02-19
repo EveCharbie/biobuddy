@@ -228,7 +228,7 @@ class OsimModelParser(AbstractModelParser):
                 joint = Joint.from_element(element, self.ignore_fixed_dof_tag, self.ignore_clamped_dof_tag)
                 if joint.function:
                     self.warnings.append(
-                        f"Some functions were present for the {self.joints[-1].name} joint. "
+                        f"Some functions were present for the {joint.name} joint. "
                         "This feature is not implemented in biorbd yet so it will be ignored."
                     )
                 self.joints.append(joint)
@@ -331,11 +331,17 @@ class OsimModelParser(AbstractModelParser):
         """
         dof_names = []
         for joint in self.joints:
-            for dof in joint.spatial_transform:
-                if dof.coordinate and dof.coordinate.name:
-                    if dof.coordinate.name in dof_names:
-                        raise RuntimeError(f"DoF name {dof.coordinate.name} is not unique in the model.")
-                    dof_names.append(dof.coordinate.name)
+            if joint.type == "PinJoint":
+                if joint.coordinates[0] and joint.coordinates[0].name:
+                    if joint.coordinates[0].name in dof_names:
+                        raise RuntimeError(f"DoF name {joint.coordinates[0].name} is not unique in the model.")
+                    dof_names.append(joint.coordinates[0].name)
+            elif joint.type == "CustomJoint":
+                for dof in joint.spatial_transform:
+                    if dof.coordinate and dof.coordinate.name:
+                        if dof.coordinate.name in dof_names:
+                            raise RuntimeError(f"DoF name {dof.coordinate.name} is not unique in the model.")
+                        dof_names.append(dof.coordinate.name)
 
         for muscle in self.muscles:
 
