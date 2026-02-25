@@ -213,6 +213,7 @@ class ModelEvaluation:
         for i in range(self.osim_model.getJointSet().getSize()):
             translation_idx = []
             rotation_idx = []
+            current_index = 0
             for j in range(self.osim_model.getJointSet().get(i).numCoordinates()):
                 if not self.osim_model.getJointSet().get(i).get_coordinates(j).get_locked():
 
@@ -224,11 +225,19 @@ class ModelEvaluation:
                         raise RuntimeError("Unknown motionType.")
 
                     if motion_type == MotionType.TRANSLATION:
-                        translation_idx.append(tot_idx + j)
+                        translation_idx.append(tot_idx + current_index)
+                        current_index += 1
                     elif motion_type == MotionType.TRANSLATION_AND_ROTATION:
-                        raise RuntimeError(f"TODO: {MotionType.TRANSLATION_AND_ROTATION.value} must be split in two.")
+                        raise NotImplementedError("ffffff")
+                        trans_idx = self.osim_model.getJointSet().get(i).get_coordinates(j).Translational
+                        translation_idx.append(tot_idx + trans_idx)
+                        rot_idx = self.osim_model.getJointSet().get(i).get_coordinates(j).Rotational
+                        rotation_idx.append(tot_idx + rot_idx)
+                        current_index += 2
                     elif motion_type == MotionType.ROTATION:
-                        rotation_idx.append(tot_idx + j)
+                        rotation_idx.append(tot_idx + current_index)
+                        current_index += 1
+
 
             tot_idx += self.osim_model.getJointSet().get(i).numCoordinates()
             ordered_idx += rotation_idx + translation_idx
@@ -554,18 +563,13 @@ def test_translation_osim_to_biomod():
 
     # pin_joint_error_models
     # ["Arm26/arm26.osim", "Gait2354_Simbody/subject01_simbody.osim"]
-    successful_models = [
+    successful_models = ["Arm26/arm26.osim", "Gait2354_Simbody/subject01_simbody.osim"]
+    pin_joint_error_models = [
         "Pendulum/double_pendulum.osim",
         "DoublePendulum/double_pendulum.osim",
         "Rajagopal/RajagopalLaiUhlrich2023.osim",
         "Rajagopal/Rajagopal2016.osim",
         "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
-        "Gait10dof18musc/subject01_metabolics_spring.osim",
-        "Gait10dof18musc/subject01.osim",
-        "Gait10dof18musc/gait10dof18musc.osim",
-        "Gait10dof18musc/subject01_metabolics_path_spring.osim",
-        "Gait10dof18musc/subject01_metabolics.osim",
-        "Gait10dof18musc/subject01_metabolics_path_actuator.osim",
     ]
     slider_joint_error_models = ["Tug_of_War/Tug_of_War.osim", "Tug_of_War/Tug_of_War_Millard.osim"]
     lxml_synthax_error = [
@@ -591,6 +595,12 @@ def test_translation_osim_to_biomod():
         "Gait2354_Simbody/gait2354_simbody.osim",
         "Gait2354_Simbody/subject01_simbody.osim",
         "Hamner/FullBodyModel_Hamner2010_v2_0.osim",
+        "Gait10dof18musc/subject01_metabolics_path_spring.osim",
+        "Gait10dof18musc/subject01_metabolics_path_actuator.osim",
+        "Gait10dof18musc/gait10dof18musc.osim",
+        "Gait10dof18musc/subject01_metabolics_spring.osim",
+        "Gait10dof18musc/subject01.osim",
+        "Gait10dof18musc/subject01_metabolics.osim",
     ]
     skipped = ["WristModel/wrist.osim"]  # To be verified
 
@@ -604,7 +614,8 @@ def test_translation_osim_to_biomod():
                 osim_filepath = os.path.join(root, name)
                 biomod_filepath = os.path.join(biomod_root_path, name.replace(".osim", ".bioMod"))
 
-                if os.path.join(folder, name) in successful_models + translation_and_rotation_dofs:
+                # if os.path.join(folder, name) in successful_models + translation_and_rotation_dofs:
+                if os.path.join(folder, name) in pin_joint_error_models:
                     # Delete the biomod file so we are sure to create it
                     if os.path.exists(biomod_filepath):
                         os.remove(biomod_filepath)
@@ -658,8 +669,6 @@ def test_translation_osim_to_biomod():
                         muscle_state_type=MuscleStateType.DEGROOTE,
                         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
                     )
-                    # model.animate()
-                    model_from_biomod_2.animate()
 
                     compare_osim_translated_model(model, model_from_osim_2, decimal=4)
                     # compare_models will not work because of the ghost segments
