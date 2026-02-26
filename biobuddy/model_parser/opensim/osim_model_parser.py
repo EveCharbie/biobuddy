@@ -490,7 +490,8 @@ class OsimModelParser(AbstractModelParser):
             else:
                 parent = dof.parent_body.split("/")[-1]
 
-        offset = [dof.parent_offset_trans, dof.parent_offset_rot]
+        parent_offset = [dof.parent_offset_trans, dof.parent_offset_rot]
+        child_offset = [dof.child_offset_trans, dof.child_offset_rot]
 
         # Coordinates
         (
@@ -519,8 +520,14 @@ class OsimModelParser(AbstractModelParser):
             axis_offset = np.identity(3)
             # Parent offset
             body_name = body.name + "_parent_offset"
-            self.write_virtual_segment(name=body_name, parent_name=parent, frame_offset=offset, rt_in_matrix=False)
+            self.write_virtual_segment(
+                name=body_name,
+                parent_name=parent,
+                frame_offset=parent_offset,
+                rt_in_matrix=False,
+            )
             parent = body_name
+            child_frame_offset = self.get_scs_from_offset(rt_in_matrix=False, frame_offset=child_offset).scs
 
             # Translations
             if len(translations) != 0:
@@ -538,6 +545,7 @@ class OsimModelParser(AbstractModelParser):
                         name=body_name,
                         parent=parent,
                         rt_in_matrix=True,
+                        # frame_offset=child_frame_offset,
                         frame_offset=rt_matrix,
                         q_range=effective_trans_ranges,
                         trans_dof=trans_axis,
@@ -566,6 +574,7 @@ class OsimModelParser(AbstractModelParser):
                         name=body_name,
                         parent=parent,
                         rt_in_matrix=True,
+                        # frame_offset=child_frame_offset,
                         frame_offset=rt_matrix,
                         q_range=effective_rot_ranges,
                         rot_dof=rot_axis,
@@ -579,6 +588,7 @@ class OsimModelParser(AbstractModelParser):
                         axis_offset,
                         body_name,
                         parent,
+                        # frame_offset=child_frame_offset,
                         frame_offset=rt_matrix,
                         rt_in_matrix=True,
                         spatial_transform=dof.spatial_transform,
@@ -600,7 +610,7 @@ class OsimModelParser(AbstractModelParser):
                 parent = body_name
 
             # Reset the values to keep only the true segment
-            offset = [dof.child_offset_trans, dof.child_offset_rot]
+            parent_offset = [-dof.child_offset_trans, -dof.child_offset_rot]
             trans_dof = ""
             rot_dof = ""
             effective_trans_ranges = []
@@ -609,11 +619,14 @@ class OsimModelParser(AbstractModelParser):
             effective_rot_dof_names = []
 
             axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir)
+            # parent_offset = axis_offset.inverse
+            offset_temporary = axis_offset
+            parent_offset = [offset_temporary.translation, offset_temporary.euler_angles("xyz")]
 
         self.write_true_segment(
             name=body.name,
             parent_name=parent,
-            frame_offset=offset,
+            frame_offset=parent_offset,
             com=body.mass_center,
             mass=body.mass,
             inertia=body.inertia,
@@ -860,7 +873,7 @@ class OsimModelParser(AbstractModelParser):
 
     def write_segments_with_a_geometry_only(self, body, parent, mesh_dir):
         parent_name = parent
-        frame_offset = body.socket_frame
+        frame_offset = RotoTransMatrix()
         for i, virt_body in enumerate(body.virtual_body):
             if i == 0:
                 # ignore the first body as already printed as a true segment
