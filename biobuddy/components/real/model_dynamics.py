@@ -880,12 +880,12 @@ class ModelDynamics:
             if model_path is None or not model_path.endswith(".bioMod"):
                 current_path_file = Path(__file__).parent
                 model_path = f"{current_path_file}/../../temporary_models/temporary.bioMod"
-                if self.has_mesh_files:
-                    # TODO: match the mesh_file directory to allow seeing the mesh files too
-                    self.to_biomod(model_path, with_mesh=False)
-                else:
-                    # Allow to see the mesh points
-                    self.to_biomod(model_path, with_mesh=True)
+                # if self.has_mesh_files:
+                #     # TODO: match the mesh_file directory to allow seeing the mesh files too
+                #     self.to_biomod(model_path, with_mesh=False)
+                # else:
+                #     # Allow to see the mesh points
+                self.to_biomod(model_path, with_mesh=True)
 
             if viewer_type == ViewerType.BIOVIZ:
                 try:

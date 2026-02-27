@@ -610,7 +610,7 @@ class OsimModelParser(AbstractModelParser):
                 parent = body_name
 
             # Reset the values to keep only the true segment
-            parent_offset = [-dof.child_offset_trans, -dof.child_offset_rot]
+            parent_offset = RotoTransMatrix.from_euler_angles_and_translation("xyz", dof.child_offset_rot, dof.child_offset_trans)
             trans_dof = ""
             rot_dof = ""
             effective_trans_ranges = []
@@ -618,9 +618,8 @@ class OsimModelParser(AbstractModelParser):
             effective_trans_dof_names = []
             effective_rot_dof_names = []
 
-            axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir)
-            # parent_offset = axis_offset.inverse
-            offset_temporary = axis_offset
+            axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir, parent_offset)
+            offset_temporary = axis_offset.inverse
             parent_offset = [offset_temporary.translation, offset_temporary.euler_angles("xyz")]
 
         self.write_true_segment(
@@ -871,7 +870,7 @@ class OsimModelParser(AbstractModelParser):
             )
         )
 
-    def write_segments_with_a_geometry_only(self, body, parent, mesh_dir):
+    def write_segments_with_a_geometry_only(self, body: Body, parent: str, mesh_dir: str, parent_offset: RotoTransMatrix):
         parent_name = parent
         frame_offset = RotoTransMatrix()
         for i, virt_body in enumerate(body.virtual_body):
@@ -883,7 +882,7 @@ class OsimModelParser(AbstractModelParser):
             self.write_virtual_segment(
                 name=body_name,
                 parent_name=parent,
-                frame_offset=body.mesh_offset[i],
+                frame_offset=parent_offset @ body.mesh_offset[i],
                 mesh_dir=mesh_dir if mesh_dir is not None else None,
                 mesh_file=f"{body.mesh[i]}" if mesh_dir is not None else None,
                 mesh_color=body.mesh_color[i] if mesh_dir is not None else None,

@@ -9,7 +9,7 @@ import pytest
 import numpy.testing as npt
 import lxml
 
-from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal, LigamentType
+from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal, LigamentType, ViewerType
 from test_utils import compare_models
 
 
@@ -629,7 +629,8 @@ def test_translation_osim_to_biomod():
                         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
                     )
                     model.fix_via_points()
-                    model.to_biomod(biomod_filepath, with_mesh=False)
+                    model.change_mesh_directories("Geometry_cleaned")
+                    model.to_biomod(biomod_filepath, with_mesh=True)
 
                     # Test that the model created is valid
                     biomod_model = biorbd.Model(biomod_filepath)
@@ -669,6 +670,11 @@ def test_translation_osim_to_biomod():
                         muscle_state_type=MuscleStateType.DEGROOTE,
                         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
                     )
+
+                    # import pyorerun
+                    # animation = pyorerun.LiveModelAnimation(osim_filepath)
+                    # animation.rerun()
+                    # model.animate()
 
                     compare_osim_translated_model(model, model_from_osim_2, decimal=4)
                     # compare_models will not work because of the ghost segments
