@@ -14,7 +14,7 @@ from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCo
 from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
-from ..utils.marker_data import MarkerData
+from ..utils.marker_data import MarkerData, DictData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
     RotationMatrix,
@@ -265,13 +265,15 @@ class RigidSegmentIdentification(ABC):
         self._check_segment_names()
         self._check_marker_functional_trial_file()
 
+        self.static_data: MarkerData = None
+
     @abstractmethod
     def perform_task(
         self,
         original_model: BiomechanicalModelReal,
         new_model: BiomechanicalModelReal,
-        parent_rt_init: RotoTransMatrixTimeSeries,
-        child_rt_init: RotoTransMatrixTimeSeries,
+        # parent_rt_init: RotoTransMatrixTimeSeries,
+        # child_rt_init: RotoTransMatrixTimeSeries,
     ) -> RotoTransMatrix:
         pass
 
@@ -313,6 +315,20 @@ class RigidSegmentIdentification(ABC):
         rt_child: RotoTransMatrixTimeSeries,
         without_exp_markers: bool = False,
     ):
+        """
+        Creates an animation of the RT of the segments.
+
+        Parameters
+        ----------
+        original_model : BiomechanicalModelReal
+            The original model before the SCoRE/SARA modification. It is used to get the meshes and markers to visualize in the animation.
+        rt_parent : RotoTransMatrixTimeSeries
+            The RT of the parent segment in the global reference frame for each frame of the functional trial.
+        rt_child : RotoTransMatrixTimeSeries
+            The RT of the child segment in the global reference frame for each frame of the functional trial.
+        without_exp_markers : bool
+            If True, the experimental markers from the functional trial are not shown in the animation.
+        """
 
         def setup_segments_for_animation(segment_name: str):
             mesh_file = None
@@ -549,90 +565,164 @@ class RigidSegmentIdentification(ABC):
         )
         return constraints
 
-    def scipy_optimal_rt(
-        self,
-        markers_in_global: np.ndarray,
-        static_markers_in_local: np.ndarray,
-        rt_init: RotoTransMatrixTimeSeries,
-        marker_names: list[str],
-    ) -> RotoTransMatrixTimeSeries:
-
-        rt_matrix_init = rt_init.get_rt_matrix()
-        initialize_whole_trial_reconstruction = False if rt_matrix_init.shape[2] == 1 else True
-        nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(
-            markers_in_global, static_markers_in_local, marker_names
-        )
-
-        rt_optimal = np.zeros((4, 4, nb_frames)) * np.nan
-        init = rt_init[0].rt_matrix  # Initialize with the first frame
-        for i_frame in range(nb_frames):
-
-            if np.isnan(np.sum(markers_in_global[:, :, i_frame])):
-                # If this frame contains NaNs it is best not to use it
-                rt_optimal[:, :, i_frame] = np.ones((4, 4)) * np.nan
-
-            else:
-                init = init.flatten()
-
-                lbx = np.ones((4, 4)) * -5
-                ubx = np.ones((4, 4)) * 5
-                lbx[:3, :3] = -1
-                ubx[:3, :3] = 1
-                lbx[3, :] = [0, 0, 0, 1]
-                ubx[3, :] = [0, 0, 0, 1]
-
-                sol = optimize.minimize(
-                    fun=lambda rt: self.marker_residual(
-                        optimal_rt=rt,
-                        static_markers_in_local=static_markers_in_local,
-                        functional_markers_in_global=markers_in_global[:, :, i_frame],
-                    ),
-                    x0=init,
-                    method="SLSQP",
-                    constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
-                    bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
-                )
-                if sol.success:
-                    rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                else:
-                    # If the optimization fails, we use the initial rt matrix to initialize the next frame
-                    init = rt_init[0].rt_matrix
-                    print(f"The optimization failed: {sol.message}")
-                    continue
-
-            # Setup for the next frame
-            if initialize_whole_trial_reconstruction:
-                # Use the rt from the reconstruction of the whole trial at the current frame
-                frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
-                init = rt_init[frame].rt_matrix
-            else:
-                # Use the optimal rt of the previous frame
-                init = rt_optimal[:, :, i_frame]
-
-        return RotoTransMatrixTimeSeries.from_rt_matrix(rt_optimal)
+    # def scipy_optimal_rt(
+    #     self,
+    #     markers_in_global: np.ndarray,
+    #     static_markers_in_local: np.ndarray,
+    #     rt_init: RotoTransMatrixTimeSeries,
+    #     marker_names: list[str],
+    # ) -> RotoTransMatrixTimeSeries:
+    #
+    #     rt_matrix_init = rt_init.get_rt_matrix()
+    #     initialize_whole_trial_reconstruction = False if rt_matrix_init.shape[2] == 1 else True
+    #     nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(
+    #         markers_in_global, static_markers_in_local, marker_names
+    #     )
+    #
+    #     rt_optimal = np.zeros((4, 4, nb_frames)) * np.nan
+    #     init = rt_init[0].rt_matrix  # Initialize with the first frame
+    #     for i_frame in range(nb_frames):
+    #
+    #         if np.isnan(np.sum(markers_in_global[:, :, i_frame])):
+    #             # If this frame contains NaNs it is best not to use it
+    #             rt_optimal[:, :, i_frame] = np.ones((4, 4)) * np.nan
+    #
+    #         else:
+    #             init = init.flatten()
+    #
+    #             lbx = np.ones((4, 4)) * -5
+    #             ubx = np.ones((4, 4)) * 5
+    #             lbx[:3, :3] = -1
+    #             ubx[:3, :3] = 1
+    #             lbx[3, :] = [0, 0, 0, 1]
+    #             ubx[3, :] = [0, 0, 0, 1]
+    #
+    #             sol = optimize.minimize(
+    #                 fun=lambda rt: self.marker_residual(
+    #                     optimal_rt=rt,
+    #                     static_markers_in_local=static_markers_in_local,
+    #                     functional_markers_in_global=markers_in_global[:, :, i_frame],
+    #                 ),
+    #                 x0=init,
+    #                 method="SLSQP",
+    #                 constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
+    #                 bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
+    #             )
+    #             if sol.success:
+    #                 rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
+    #             else:
+    #                 # If the optimization fails, we use the initial rt matrix to initialize the next frame
+    #                 init = rt_init[0].rt_matrix
+    #                 print(f"The optimization failed: {sol.message}")
+    #                 continue
+    #
+    #         # Setup for the next frame
+    #         if initialize_whole_trial_reconstruction:
+    #             # Use the rt from the reconstruction of the whole trial at the current frame
+    #             frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
+    #             init = rt_init[frame].rt_matrix
+    #         else:
+    #             # Use the optimal rt of the previous frame
+    #             init = rt_optimal[:, :, i_frame]
+    #
+    #     return RotoTransMatrixTimeSeries.from_rt_matrix(rt_optimal)
 
     def rt_from_trial(
         self,
-        parent_rt_init: RotoTransMatrixTimeSeries = None,
-        child_rt_init: RotoTransMatrixTimeSeries = None,
-    ) -> Tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+        # parent_rt_init: RotoTransMatrixTimeSeries = None,
+        # child_rt_init: RotoTransMatrixTimeSeries = None,
+    ) -> Tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the rigid transformation matrices rt (4x4xN) that align local marker positions to global marker positions over time.
         """
-        rt_parent_functional = self.scipy_optimal_rt(
-            markers_in_global=self.parent_markers_global,
-            static_markers_in_local=self.parent_static_markers_in_local,
-            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init,
-            marker_names=self.parent_marker_names,
+        # rt_parent_functional = self.scipy_optimal_rt(
+        #     markers_in_global=self.parent_markers_global,
+        #     static_markers_in_local=self.parent_static_markers_in_local,
+        #     rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init,
+        #     marker_names=self.parent_marker_names,
+        # )
+        # rt_child_functional = self.scipy_optimal_rt(
+        #     markers_in_global=self.child_markers_global,
+        #     static_markers_in_local=self.child_static_markers_in_local,
+        #     rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init,
+        #     marker_names=self.child_marker_names,
+        # )
+
+        parent_functional_marker_data = self._data.get_partial_dict_data(self.parent_marker_names)
+        parent_static_marker_data = self.static_data.get_partial_dict_data(self.parent_marker_names)
+        rt_parent_functional = self.rigidify(
+            functional_data=parent_functional_marker_data,
+            static_data=parent_static_marker_data,
         )
-        rt_child_functional = self.scipy_optimal_rt(
-            markers_in_global=self.child_markers_global,
-            static_markers_in_local=self.child_static_markers_in_local,
-            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init,
-            marker_names=self.child_marker_names,
+        rt_parent_static = self.rigidify(
+            functional_data=parent_static_marker_data,
         )
 
-        return rt_parent_functional, rt_child_functional
+        child_functional_marker_data = self._data.get_partial_dict_data(self.child_marker_names)
+        child_static_marker_data = self.static_data.get_partial_dict_data(self.child_marker_names)
+        rt_child_functional = self.rigidify(
+            functional_data=child_functional_marker_data,
+            static_data=child_static_marker_data,
+        )
+        rt_child_static = self.rigidify(
+            functional_data=child_static_marker_data,
+        )
+
+        return rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static
+
+    @staticmethod
+    def rigidify(functional_data: MarkerData, static_data: MarkerData = None) -> RotoTransMatrixTimeSeries:
+        """
+        Compute the rigid body transformation matrices from a set of markers
+
+        Parameters
+        ----------
+        functional_data
+            The data containing the markers
+        static_data
+            The static data containing the markers, only the first frame is considered.
+            If None is provided, the first frame of data is used as reference. Please note, the resulting rt won't
+            correspond to another trial with a different initial pose.
+
+        Returns
+        -------
+        The rigid body transformation matrices as a RotoTransMatrixTimeSeries (4x4xT)
+        """
+        # Determine a static
+        static_markers = (
+            static_data.get_position(functional_data.marker_names)[:, :, 0:1]
+            if static_data is not None
+            else functional_data.get_position(functional_data.marker_names)[:, :, 0:1]
+        )
+
+        reference_pts = static_markers[:3, :, 0]  # 3 x N at frame 0
+        reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
+        reference_pts_centered = reference_pts - reference_centroid
+
+        markers = functional_data.all_marker_positions
+        rt_matrices = RotoTransMatrixTimeSeries(functional_data.nb_frames)
+        for i_frame in range(functional_data.nb_frames):
+            pts = markers[:3, :, i_frame]
+            centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
+            pts_centered = pts - centroid
+
+            h = reference_pts_centered @ pts_centered.T
+            try:
+                u, _, vh = np.linalg.svd(h, full_matrices=False)
+            except np.linalg.LinAlgError as e:
+                rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.ndarray((4, 4, 1)) * np.nan)
+                continue
+            r = vh.T @ u.T
+
+            # Check for reflection (instead of rotation) and correct if needed
+            if np.linalg.det(r) < 0:
+                vh[-1, :] *= -1
+                r = vh.T @ u.T
+
+            t = centroid.flatten()
+            rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1])))
+
+        return rt_matrices
 
 
 def get_svd(
@@ -739,14 +829,16 @@ class Score(RigidSegmentIdentification):
         self,
         original_model: BiomechanicalModelReal,
         new_model: BiomechanicalModelReal,
-        parent_rt_init: RotoTransMatrixTimeSeries,
-        child_rt_init: RotoTransMatrixTimeSeries,
+        # parent_rt_init: RotoTransMatrixTimeSeries,
+        # child_rt_init: RotoTransMatrixTimeSeries,
     ):
         # TODO: This Score should agnostic of any model, that is passing a series of rt_parent and rt_child matrices
         # and it returns the optimal point of rotation.
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
+            # parent_rt_init, child_rt_init,
+        )
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
@@ -1009,10 +1101,16 @@ class Sara(RigidSegmentIdentification):
             longitudinal_index = 1
         return aor_index, perpendicular_index, longitudinal_index
 
+    @staticmethod
+    def get_aor_in_child(aor_child):
+        pass
+
+
     def _extract_scs_from_axis(
         self,
         original_model: BiomechanicalModelReal,
         aor_local: np.ndarray,
+        rt_child_static: RotoTransMatrix,
         joint_center_local: np.ndarray,
         longitudinal_axis_local: np.ndarray,
     ) -> RotoTransMatrix:
@@ -1020,6 +1118,8 @@ class Sara(RigidSegmentIdentification):
         Extract the segment coordinate system (SCS) from the axis of rotation.
         """
         aor_index, perpendicular_index, longitudinal_index = self.get_rotation_index(original_model)
+
+        rt_child_static @ aor_local
 
         # Extract an orthonormal basis
         perpendicular_axis = np.cross(aor_local[:3], longitudinal_axis_local[:3, 0])
@@ -1040,18 +1140,27 @@ class Sara(RigidSegmentIdentification):
         self,
         original_model: BiomechanicalModelReal,
         new_model: BiomechanicalModelReal,
-        parent_rt_init: RotoTransMatrixTimeSeries,
-        child_rt_init: RotoTransMatrixTimeSeries,
+        # parent_rt_init: RotoTransMatrixTimeSeries,
+        # child_rt_init: RotoTransMatrixTimeSeries,
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
+            # parent_rt_init, child_rt_init,
+        )
 
         if self.animate_rt:
+            jcs_in_global = original_model.forward_kinematics(np.zeros((original_model.nb_q, )))
+            parent_static_rt = jcs_in_global[self.parent_name][0]
+            child_static_rt = jcs_in_global[self.child_name][0]
+            # transition_parent = (jcs_in_global[self.parent_name][0] @ rt_parent_static[0].inverse) @ rt_parent_functional
+            # transition_child = (jcs_in_global[self.child_name][0] @ rt_child_static[0].inverse) @ rt_child_functional
+            transition_parent = (parent_static_rt @ rt_parent_static[0].inverse) @ rt_parent_functional
+            transition_child = (child_static_rt @ rt_child_static[0].inverse) @ rt_child_functional
             self.animate_the_segment_reconstruction(
                 original_model,
-                rt_parent_functional,
-                rt_child_functional,
+                transition_parent,
+                transition_child,
             )
 
         # Identify the approximate longitudinal axis of the segments
@@ -1059,14 +1168,15 @@ class Sara(RigidSegmentIdentification):
 
         # Identify axis of rotation
         original_axis_global, _ = self._original_rotation_axis(new_model)
-        aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
+        _, _, aor_child, _, cor_parent, _, _, _ = self.perform_algorithm(
             rt_parent_functional, rt_child_functional, original_axis_global, recursive_outlier_removal=True
         )
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
             original_model=original_model,
-            aor_local=aor_local_child,
+            aor_local=aor_child,
+            rt_child_static=rt_child_static,
             joint_center_local=joint_center_local,
             longitudinal_axis_local=longitudinal_axis_local,
         )
@@ -1229,6 +1339,12 @@ class JointCenterTool:
     ) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
+        static_markers_data = DictData(
+            marker_dict={
+                self.original_model.marker_names[i_marker]: static_markers_in_global[:, i_marker, :]for i_marker in range(self.original_model.nb_markers)
+            }
+        )
+
         for task in self.joint_center_tasks:
 
             # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
@@ -1261,18 +1377,20 @@ class JointCenterTool:
                 if marker not in task._data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
-            q_init, _ = model_for_initial_rt.inverse_kinematics(
-                marker_positions=marker_positions,
-                marker_names=marker_names,
-                marker_weights=initial_rt_marker_weights,
-            )
-
-            segment_rt_in_global = model_for_initial_rt.forward_kinematics(q_init)
-            parent_rt_init = segment_rt_in_global[task.parent_name]
-            child_rt_init = segment_rt_in_global[task.child_name]
+            # q_init, _ = model_for_initial_rt.inverse_kinematics(
+            #     marker_positions=marker_positions,
+            #     marker_names=marker_names,
+            #     marker_weights=initial_rt_marker_weights,
+            # )
+            #
+            # segment_rt_in_global = model_for_initial_rt.forward_kinematics(q_init)
+            # parent_rt_init = segment_rt_in_global[task.parent_name]
+            # child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
             # TODO: @charbie 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
+            task.static_data = static_markers_data
+
             task.parent_static_markers_in_global = static_markers_in_global[
                 :, self.original_model.markers_indices(task.parent_marker_names)
             ]
@@ -1297,16 +1415,18 @@ class JointCenterTool:
             task.child_markers_global = task._data.get_position(task.child_marker_names)
             task.check_marker_labeling()
 
-            if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:
-                task.animate_the_segment_reconstruction(
-                    self.original_model,
-                    parent_rt_init,
-                    child_rt_init,
-                )
+            # if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:
+            #     task.animate_the_segment_reconstruction(
+            #         self.original_model,
+            #         parent_rt_init,
+            #         child_rt_init,
+            #     )
 
             # Get the new segment coordinate system's RT
             task.check_marker_positions()
-            new_rt_in_local = task.perform_task(self.original_model, self.new_model, parent_rt_init, child_rt_init)
+            new_rt_in_local = task.perform_task(self.original_model, self.new_model,
+                                                # parent_rt_init, child_rt_init,
+                                                )
 
             # Replace the joint center in the new model
             if self.new_model.has_parent_offset(task.child_name):

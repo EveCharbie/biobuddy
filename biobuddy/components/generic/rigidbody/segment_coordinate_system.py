@@ -166,59 +166,6 @@ class SegmentCoordinateSystem:
 
 
 class SegmentCoordinateSystemUtils:
-    @staticmethod
-    def rigidify(functional_data: MarkerData, static_data: MarkerData = None) -> RotoTransMatrixTimeSeries:
-        """
-        Compute the rigid body transformation matrices from a set of markers
-
-        Parameters
-        ----------
-        functional_data
-            The data containing the markers
-        static_data
-            The static data containing the markers, only the first frame is considered.
-            If None is provided, the first frame of data is used as reference. Please note, the resulting rt won't
-            correspond to another trial with a different initial pose.
-
-        Returns
-        -------
-        The rigid body transformation matrices as a RotoTransMatrixTimeSeries (4x4xT)
-        """
-        # Determine a static
-        static_markers = (
-            static_data.get_position(functional_data.marker_names)[:, :, 0:1]
-            if static_data is not None
-            else functional_data.get_position(functional_data.marker_names)[:, :, 0:1]
-        )
-
-        reference_pts = static_markers[:3, :, 0]  # 3 x N at frame 0
-        reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
-        reference_pts_centered = reference_pts - reference_centroid
-
-        markers = functional_data.all_marker_positions
-        rt_matrices = RotoTransMatrixTimeSeries(functional_data.nb_frames)
-        for i_frame in range(functional_data.nb_frames):
-            pts = markers[:3, :, i_frame]
-            centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
-            pts_centered = pts - centroid
-
-            h = reference_pts_centered @ pts_centered.T
-            try:
-                u, _, vh = np.linalg.svd(h, full_matrices=False)
-            except np.linalg.LinAlgError as e:
-                rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.ndarray((4, 4, 1)) * np.nan)
-                continue
-            r = vh.T @ u.T
-
-            # Check for reflection (instead of rotation) and correct if needed
-            if np.linalg.det(r) < 0:
-                vh[-1, :] *= -1
-                r = vh.T @ u.T
-
-            t = centroid.flatten()
-            rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1])))
-
-        return rt_matrices
 
     @staticmethod
     def mean_markers(marker_names: tuple[str, ...] | list[str]) -> Callable:
@@ -278,18 +225,18 @@ class SegmentCoordinateSystemUtils:
                 # Rigidify the parent segment at static markers
                 parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                rt_parent_static = Score.rigidify(
                     functional_data=parent_static_marker_data,
                 )
 
                 # Rigidify functional data
                 parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
-                rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                rt_parent_func = Score.rigidify(
                     functional_data=parent_functional_marker_data,
                     static_data=parent_static_marker_data,
                 )
                 child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
-                rt_child_func = SegmentCoordinateSystemUtils.rigidify(
+                rt_child_func = Score.rigidify(
                     functional_data=child_functional_marker_data,
                     static_data=child_static_marker_data,
                 )
@@ -309,7 +256,7 @@ class SegmentCoordinateSystemUtils:
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
+                rt_child_static = Score.rigidify(child_static_marker_data)
                 _visualize_score(static_markers, rt_parent_static, rt_child_static, cor_static)
 
                 rt_parent_func = score_cache[static_markers_hash][1]
@@ -362,18 +309,18 @@ class SegmentCoordinateSystemUtils:
                 # Rigidify the parent segment at static markers
                 parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                rt_parent_static = Sara.rigidify(
                     functional_data=parent_static_marker_data,
                 )
 
                 # Rigidify functional data
                 parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
-                rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                rt_parent_func = Sara.rigidify(
                     functional_data=parent_functional_marker_data,
                     static_data=parent_static_marker_data,
                 )
                 child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
-                rt_child_func = SegmentCoordinateSystemUtils.rigidify(
+                rt_child_func = Sara.rigidify(
                     functional_data=child_functional_marker_data,
                     static_data=child_static_marker_data,
                 )
@@ -402,7 +349,7 @@ class SegmentCoordinateSystemUtils:
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_child_static = SegmentCoordinateSystemUtils.rigidify(
+                rt_child_static = Sara.rigidify(
                     functional_data=child_static_marker_data,
                 )
                 _visualize_score(static_markers, rt_parent_static, rt_child_static, [start_aor_static, end_aor_static])
