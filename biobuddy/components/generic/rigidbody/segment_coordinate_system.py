@@ -344,7 +344,8 @@ class SegmentCoordinateSystemUtils:
             end_aor_static = np.ones((4, frame_count_static))
             start_aor_static = np.ones((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
+                # end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ (cor_parent+aor_parent)).reshape(4)
+                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ (aor_parent)).reshape(4)
                 start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
@@ -360,7 +361,8 @@ class SegmentCoordinateSystemUtils:
                 end_aor_func = np.zeros((4, frame_count_func))
                 start_aor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent).reshape(4)
+                    # end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ (cor_parent+aor_parent)).reshape(4)
+                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ (aor_parent)).reshape(4)
                     start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent).reshape(4)
                 _visualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
 

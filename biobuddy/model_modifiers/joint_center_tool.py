@@ -1119,8 +1119,6 @@ class Sara(RigidSegmentIdentification):
         """
         aor_index, perpendicular_index, longitudinal_index = self.get_rotation_index(original_model)
 
-        rt_child_static @ aor_local
-
         # Extract an orthonormal basis
         perpendicular_axis = np.cross(aor_local[:3], longitudinal_axis_local[:3, 0])
         perpendicular_axis /= np.linalg.norm(perpendicular_axis)
@@ -1155,8 +1153,8 @@ class Sara(RigidSegmentIdentification):
             child_static_rt = jcs_in_global[self.child_name][0]
             # transition_parent = (jcs_in_global[self.parent_name][0] @ rt_parent_static[0].inverse) @ rt_parent_functional
             # transition_child = (jcs_in_global[self.child_name][0] @ rt_child_static[0].inverse) @ rt_child_functional
-            transition_parent = (parent_static_rt @ rt_parent_static[0].inverse) @ rt_parent_functional
-            transition_child = (child_static_rt @ rt_child_static[0].inverse) @ rt_child_functional
+            transition_parent = (rt_parent_static[0].inverse @ parent_static_rt) @ rt_parent_functional
+            transition_child = (rt_child_static[0].inverse @ child_static_rt) @ rt_child_functional
             self.animate_the_segment_reconstruction(
                 original_model,
                 transition_parent,
