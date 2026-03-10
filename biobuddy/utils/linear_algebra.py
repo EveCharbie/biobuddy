@@ -87,23 +87,29 @@ class RotoTransMatrix:
     def __init__(self):
         self._rt = np.identity(4)
 
-    def __matmul__(self, other: "RotationMatrix" | Point) -> "RotationMatrix" | Point:
+    def __matmul__(
+        self, other: "RotationMatrix" | Point | "RotoTransMatrixTimeSeries"
+    ) -> "RotationMatrix" | Point | "RotoTransMatrixTimeSeries":
         if isinstance(other, RotoTransMatrix):
             # Matrix multiplication of two RotoTransMatrix objects gives a new RotoTransMatrix object
             mult_result = self.rt_matrix @ other.rt_matrix
-            out = RotoTransMatrix.from_rt_matrix(mult_result)
+            return RotoTransMatrix.from_rt_matrix(mult_result)
         elif isinstance(other, np.ndarray):
             # Matrix multiplication of a RotoTransMatrix with a Point (np.array vector) gives a Point (np.array vector)
             if other.shape == (4, 4):
                 raise ValueError(
                     "You seem to be trying to multiply two RotoTransMatrix objects. Please use RotoTransMatrix @ RotoTransMatrix instead."
                 )
-            out = self.rt_matrix @ points_to_array(points=other)
+            return self.rt_matrix @ points_to_array(points=other)
+        elif isinstance(other, RotoTransMatrixTimeSeries):
+            out_rt = np.zeros((4, 4, other.nb_frames))
+            for i_frame in range(other.nb_frames):
+                out_rt[:, :, i_frame] = self.rt_matrix @ other[i_frame].rt_matrix
+            return RotoTransMatrixTimeSeries.from_rt_matrix(out_rt)
         else:
             raise NotImplementedError(
                 f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
             )
-        return out
 
     @classmethod
     def from_rotation_matrix_and_translation(cls, rotation_matrix: np.ndarray | RotationMatrix, translation: Point):
@@ -233,7 +239,7 @@ class RotoTransMatrixTimeSeries:
     def __len__(self):
         return len(self._rt_time_series)
 
-    def __matmul__(self, other: Points) -> Points:
+    def __matmul__(self, other: Points | RotoTransMatrix) -> Points | "RotoTransMatrixTimeSeries":
         if isinstance(other, np.ndarray):
             # Matrix multiplication of a RotoTransMatrixTimeSeries with Points (np.array vector) gives Points (np.array vector)
             if other.shape != (4, self.nb_frames) and other.shape != (3, self.nb_frames):
@@ -245,11 +251,16 @@ class RotoTransMatrixTimeSeries:
             points_array = points_to_array(points=other)
             for i_frame in range(self.nb_frames):
                 out[:, i_frame] = self[i_frame].rt_matrix @ points_array[:, i_frame]
+            return out
+        elif isinstance(other, RotoTransMatrix):
+            out_rt = np.zeros((4, 4, self.nb_frames))
+            for i_frame in range(self.nb_frames):
+                out_rt[:, i_frame] = self[i_frame].rt_matrix @ other.rt_matrix
+            return RotoTransMatrixTimeSeries.from_rt_matrix(out_rt)
         else:
             raise NotImplementedError(
-                f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
+                f"The multiplication of RotoTransMatrixTimeSeries with {type(other)} is not implemented yet."
             )
-        return out
 
     @classmethod
     def from_rotation_matrix_and_translation(cls, rotation_matrix: np.ndarray, translation: np.ndarray):
