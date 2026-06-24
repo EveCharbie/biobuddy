@@ -46,6 +46,10 @@ class BiomechanicalModel(ModelUtils):
         segment_name
             The name of the segment to remove
         """
+        parent_name = self.segments[segment_name].parent_name
+        for segment in self.segments:
+            if segment.parent_name == segment_name:
+                segment.parent_name = parent_name
         self.segments._remove(segment_name)
 
     def add_muscle_group(self, muscle_group: MuscleGroup):
