@@ -73,6 +73,22 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         self.segments._remove(segment_name)
 
+    def remove_muscles_without_segment(self):
+        muscles_to_remove = []
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if (
+                        muscle.origin_position.parent_name not in self.segment_names or
+                        muscle.insertion_position.parent_name not in self.segment_names
+                ):
+                    muscles_to_remove += [muscle.name]
+                for via_point in muscle.via_points:
+                    if via_point.parent_name not in self.segment_names:
+                        muscles_to_remove += [muscle.name]
+
+        self.remove_muscles(muscles_to_remove)
+        self.update_muscle_groups()
+
     def add_muscle_group(self, muscle_group: "MuscleGroupReal") -> None:
         """
         Add a muscle group to the model
