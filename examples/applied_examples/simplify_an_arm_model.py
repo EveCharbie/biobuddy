@@ -282,6 +282,11 @@ def create_planar_model(
     # And convert it to a .bioMod file
     model.to_biomod(biomod_filepath, with_mesh=with_mesh)
 
+    # NOTE: Here it is not the case, but if you had two fascicles defined as independent muscles and you wanted to
+    # merge them together, you could do it using:
+    # model.muscle_groups["muscle_group_name"].merge_muscles(["first_fascicle", "second_fascicle"])
+    # The only constraints are that the origin, insertion and via points are defined on the same segments.
+    # In that case, all properties of the muscle are the mean of fascicles except for maximal force which is the sum of fascicles
 
 def main():
 
