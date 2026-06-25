@@ -92,10 +92,12 @@ class MuscleGroupReal:
                 for via_point in self.muscles[muscle_name].via_points:
                     if via_point.condition is not None:
                         raise NotImplementedError(
-                            f"Conditional via points not implemented for muscle, got a conditional via point in {via_point.name} in the muscle {muscle_name}")
+                            f"Conditional via points not implemented for muscle, got a conditional via point in {via_point.name} in the muscle {muscle_name}"
+                        )
                     if via_point.movement is not None:
                         raise NotImplementedError(
-                            f"Moving via points not implemented for muscle, got a movement via point in {via_point.name} in the muscle {muscle_name}")
+                            f"Moving via points not implemented for muscle, got a movement via point in {via_point.name} in the muscle {muscle_name}"
+                        )
                     via_points[via_point.name] = {
                         "position": [via_point.position],
                         "parent": via_point.parent_name,
@@ -121,20 +123,26 @@ class MuscleGroupReal:
                 for via_point in self.muscles[muscle_name].via_points:
                     if via_point.condition is not None:
                         raise NotImplementedError(
-                            f"Conditional via points not implemented for muscle, got a conditional via point in {via_point.name} in the muscle {muscle_name}")
+                            f"Conditional via points not implemented for muscle, got a conditional via point in {via_point.name} in the muscle {muscle_name}"
+                        )
                     if via_point.movement is not None:
                         raise NotImplementedError(
-                            f"Moving via points not implemented for muscle, got a movement via point in {via_point.name} in the muscle {muscle_name}.")
+                            f"Moving via points not implemented for muscle, got a movement via point in {via_point.name} in the muscle {muscle_name}."
+                        )
                     # Find the right via point
                     candidates = []
                     distance = []
                     for via_name in via_points.keys():
                         if via_points[via_name]["parent"] == via_point.parent_name:
                             candidates += [via_name]
-                            distance += [np.linalg.norm(via_points[via_name]["position"][0][:3] - via_point.position[:3])]
+                            distance += [
+                                np.linalg.norm(via_points[via_name]["position"][0][:3] - via_point.position[:3])
+                            ]
                     if len(candidates) == 0:
-                        raise ValueError(f"The via_point {via_point.name} from muscle {muscle_name} could not be "
-                                         f"matched with any via points of muscle {muscle_names[0]} with via points {via_points.keys()}")
+                        raise ValueError(
+                            f"The via_point {via_point.name} from muscle {muscle_name} could not be "
+                            f"matched with any via points of muscle {muscle_names[0]} with via points {via_points.keys()}"
+                        )
                     via_point_index = np.argmin(np.array(distance))
                     via_points[candidates[via_point_index]]["position"] += [via_point.position]
 
@@ -163,12 +171,12 @@ class MuscleGroupReal:
                 origin_position=ViaPointReal(
                     name=f"origin_{new_muscle_name}",
                     parent_name=self.origin_parent_name,
-                    position=np.mean(np.array(origin_position), axis=0)
+                    position=np.mean(np.array(origin_position), axis=0),
                 ),
                 insertion_position=ViaPointReal(
                     name=f"insertion_{new_muscle_name}",
                     parent_name=self.insertion_parent_name,
-                    position=np.mean(np.array(insertion_position), axis=0)
+                    position=np.mean(np.array(insertion_position), axis=0),
                 ),
                 optimal_length=np.mean(np.array(optimal_length), axis=0),
                 maximal_force=np.sum(np.array(maximal_force)),
@@ -184,8 +192,8 @@ class MuscleGroupReal:
                     name=name,
                     parent_name=via["parent"],
                     position=np.mean(np.array(via["position"]), axis=0),
+                )
             )
-        )
 
         # Remove the original muscles
         for muscle_name in muscle_names:

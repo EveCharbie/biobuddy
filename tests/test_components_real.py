@@ -2028,6 +2028,7 @@ def test_remove_segment_reattaches_multiple_children():
     assert model.segments["child_a"].parent_name == "root"
     assert model.segments["child_b"].parent_name == "root"
 
+
 def test_remove_segments_reattaches_in_a_row():
     model = BiomechanicalModelReal()
     model.add_segment(SegmentReal(name="root"))
@@ -2041,6 +2042,7 @@ def test_remove_segments_reattaches_in_a_row():
     assert "trunk" not in model.segment_names
     assert "branch" not in model.segment_names
     assert model.segments["leave"].parent_name == "middle"
+
 
 def test_remove_leaf_segment_does_not_change_other_parents():
     model = _make_chain_model()
@@ -2060,10 +2062,10 @@ def test_remove_segment_chain_length():
 
 
 def _make_muscle(
-        name: str,
-        origin_pos: np.ndarray,
-        insertion_pos: np.ndarray,
-        group_name: str,
+    name: str,
+    origin_pos: np.ndarray,
+    insertion_pos: np.ndarray,
+    group_name: str,
 ) -> MuscleReal:
     origin = ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos)
     insertion = ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos)
@@ -2110,12 +2112,8 @@ def test_merge_muscles_basic():
         maximal_velocity=10.0,
         maximal_excitation=1.0,
     )
-    muscle_1.add_via_point(
-        ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos-0.5)
-    )
-    muscle_1.add_via_point(
-        ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos+0.2)
-    )
+    muscle_1.add_via_point(ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.5))
+    muscle_1.add_via_point(ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos + 0.2))
 
     # Second muscle
     name = "m2"
@@ -2135,12 +2133,8 @@ def test_merge_muscles_basic():
         maximal_velocity=15.0,
         maximal_excitation=2.0,
     )
-    muscle_2.add_via_point(
-        ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.25)
-    )
-    muscle_2.add_via_point(
-        ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos - 0.1)
-    )
+    muscle_2.add_via_point(ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.25))
+    muscle_2.add_via_point(ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos - 0.1))
     group.add_muscle(muscle_1)
     group.add_muscle(muscle_2)
     group.merge_muscles(["m1", "m2"])
@@ -2151,12 +2145,13 @@ def test_merge_muscles_basic():
     assert group.muscles[0].state_type == MuscleStateType.DEGROOTE
     npt.assert_almost_equal(group.muscles[0].origin_position.position[:3], (pos + pos + 0.1) / 2)
     npt.assert_almost_equal(group.muscles[0].insertion_position.position[:3], (pos + 1 + pos + 1.1) / 2)
-    assert group.muscles[0].optimal_length == (0.3 + 0.1)/2
+    assert group.muscles[0].optimal_length == (0.3 + 0.1) / 2
     assert group.muscles[0].maximal_force == (110 + 100)
-    assert group.muscles[0].tendon_slack_length == (0.05 + 0.055)/2
-    assert group.muscles[0].pennation_angle == (0.0 + 0.5)/2
-    assert group.muscles[0].maximal_velocity == (15 + 10)/2
-    assert group.muscles[0].maximal_excitation == (1 + 2)/2
+    assert group.muscles[0].tendon_slack_length == (0.05 + 0.055) / 2
+    assert group.muscles[0].pennation_angle == (0.0 + 0.5) / 2
+    assert group.muscles[0].maximal_velocity == (15 + 10) / 2
+    assert group.muscles[0].maximal_excitation == (1 + 2) / 2
+
 
 def test_merge_muscles_wrong_group_raises():
     group = MuscleGroupReal(name="grp", origin_parent_name="seg_origin", insertion_parent_name="seg_insertion")
