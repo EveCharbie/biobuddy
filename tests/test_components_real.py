@@ -1994,3 +1994,199 @@ def test_muscle_group_real_to_urdf():
     # Check that muscle group throws an error for URDF export
     with pytest.raises(NotImplementedError, match="Muscle groups are not implemented yet for URDF export"):
         muscle_group.to_urdf()
+
+
+# ------- remove_segment fixes kinematic chain ------- #
+
+
+def _make_chain_model():
+    """Build a simple 3-segment chain: root -> middle -> leaf."""
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root"))
+    model.add_segment(SegmentReal(name="middle", parent_name="root"))
+    model.add_segment(SegmentReal(name="leaf", parent_name="middle"))
+    return model
+
+
+def test_remove_segment_reattaches_child_to_grandparent():
+    model = _make_chain_model()
+    model.remove_segment("middle")
+    assert "middle" not in model.segment_names
+    assert "leaf" in model.segment_names
+    assert model.segments["leaf"].parent_name == "root"
+
+
+def test_remove_segment_reattaches_multiple_children():
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root"))
+    model.add_segment(SegmentReal(name="middle", parent_name="root"))
+    model.add_segment(SegmentReal(name="child_a", parent_name="middle"))
+    model.add_segment(SegmentReal(name="child_b", parent_name="middle"))
+
+    model.remove_segment("middle")
+    assert "middle" not in model.segment_names
+    assert model.segments["child_a"].parent_name == "root"
+    assert model.segments["child_b"].parent_name == "root"
+
+def test_remove_segments_reattaches_in_a_row():
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root"))
+    model.add_segment(SegmentReal(name="middle", parent_name="root"))
+    model.add_segment(SegmentReal(name="trunk", parent_name="middle"))
+    model.add_segment(SegmentReal(name="branch", parent_name="trunk"))
+    model.add_segment(SegmentReal(name="leave", parent_name="branch"))
+
+    model.remove_segment("trunk")
+    model.remove_segment("branch")
+    assert "trunk" not in model.segment_names
+    assert "branch" not in model.segment_names
+    assert model.segments["leave"].parent_name == "middle"
+
+def test_remove_leaf_segment_does_not_change_other_parents():
+    model = _make_chain_model()
+    model.remove_segment("leaf")
+    assert "leaf" not in model.segment_names
+    assert model.segments["middle"].parent_name == "root"
+
+
+def test_remove_segment_chain_length():
+    model = _make_chain_model()
+    assert len(model.segments) == 3
+    model.remove_segment("middle")
+    assert len(model.segments) == 2
+
+
+# ------- MuscleGroupReal.merge_muscles ------- #
+
+
+def _make_muscle(
+        name: str,
+        origin_pos: np.ndarray,
+        insertion_pos: np.ndarray,
+        group_name: str,
+) -> MuscleReal:
+    origin = ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos)
+    insertion = ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos)
+    muscle = MuscleReal(
+        name=name,
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=group_name,
+        origin_position=origin,
+        insertion_position=insertion,
+        optimal_length=0.1,
+        maximal_force=100.0,
+        tendon_slack_length=0.05,
+        pennation_angle=0.0,
+        maximal_velocity=10.0,
+        maximal_excitation=1.0,
+    )
+    return muscle
+
+
+def test_merge_muscles_basic():
+    group = MuscleGroupReal(
+        name="grp",
+        origin_parent_name="seg_origin",
+        insertion_parent_name="seg_insertion",
+    )
+    pos = np.array([[0.0], [0.0], [0.0]])
+
+    # First muscle
+    name = "m1"
+    origin_pos = pos
+    insertion_pos = pos + 1
+    muscle_1 = MuscleReal(
+        name=name,
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="grp",
+        origin_position=ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos),
+        insertion_position=ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos),
+        optimal_length=0.1,
+        maximal_force=100.0,
+        tendon_slack_length=0.05,
+        pennation_angle=0.0,
+        maximal_velocity=10.0,
+        maximal_excitation=1.0,
+    )
+    muscle_1.add_via_point(
+        ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos-0.5)
+    )
+    muscle_1.add_via_point(
+        ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos+0.2)
+    )
+
+    # Second muscle
+    name = "m2"
+    origin_pos = pos + 0.1
+    insertion_pos = pos + 1.1
+    muscle_2 = MuscleReal(
+        name=name,
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="grp",
+        origin_position=ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos),
+        insertion_position=ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos),
+        optimal_length=0.3,
+        maximal_force=110.0,
+        tendon_slack_length=0.055,
+        pennation_angle=0.5,
+        maximal_velocity=15.0,
+        maximal_excitation=2.0,
+    )
+    muscle_2.add_via_point(
+        ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.25)
+    )
+    muscle_2.add_via_point(
+        ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos - 0.1)
+    )
+    group.add_muscle(muscle_1)
+    group.add_muscle(muscle_2)
+    group.merge_muscles(["m1", "m2"])
+
+    assert len(group.muscles) == 1
+    assert group.muscles[0].name == "m1_and_m2"
+    assert group.muscles[0].muscle_type == MuscleType.HILL
+    assert group.muscles[0].state_type == MuscleStateType.DEGROOTE
+    npt.assert_almost_equal(group.muscles[0].origin_position.position[:3], (pos + pos + 0.1) / 2)
+    npt.assert_almost_equal(group.muscles[0].insertion_position.position[:3], (pos + 1 + pos + 1.1) / 2)
+    assert group.muscles[0].optimal_length == (0.3 + 0.1)/2
+    assert group.muscles[0].maximal_force == (110 + 100)
+    assert group.muscles[0].tendon_slack_length == (0.05 + 0.055)/2
+    assert group.muscles[0].pennation_angle == (0.0 + 0.5)/2
+    assert group.muscles[0].maximal_velocity == (15 + 10)/2
+    assert group.muscles[0].maximal_excitation == (1 + 2)/2
+
+def test_merge_muscles_wrong_group_raises():
+    group = MuscleGroupReal(name="grp", origin_parent_name="seg_origin", insertion_parent_name="seg_insertion")
+    pos = np.array([[0.0], [0.0], [0.0], [1.0]])
+    group.add_muscle(_make_muscle("m1", pos, pos, "grp"))
+    group.add_muscle(_make_muscle("m2", pos, pos, "grp"))
+    group.muscles["m2"]._muscle_group = "other_grp"
+
+    with pytest.raises(ValueError, match="does not belong to muscle group"):
+        group.merge_muscles(["m1", "m2"])
+
+
+# ------- BiomechanicalModelReal.remove_muscles_without_segment ------- #
+
+
+def test_remove_muscles_without_segment():
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="seg_origin"))
+    model.add_segment(SegmentReal(name="seg_insertion"))
+
+    group = MuscleGroupReal(name="grp", origin_parent_name="seg_origin", insertion_parent_name="seg_insertion")
+    pos = np.array([[0.0], [0.0], [0.0], [1.0]])
+    group.add_muscle(_make_muscle("m_keep", pos, pos, "grp"))
+    group.add_muscle(_make_muscle("m_drop", pos, pos, "grp"))
+    # Redirect m_drop's insertion to a segment that will not exist
+    group.muscles["m_drop"].insertion_position._parent_name = "ghost_segment"
+    model.add_muscle_group(group)
+
+    model.remove_muscles_without_segment()
+
+    muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
+    assert "m_keep" in muscle_names
+    assert "m_drop" not in muscle_names
