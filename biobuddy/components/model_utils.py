@@ -369,6 +369,13 @@ class ModelUtils:
             ligament_origins.append(ligament.insertion_parent_name)
         return ligament_origins
 
+    def get_muscle_muscle_group_name(self, muscle_name: str) -> str:
+        for mg in self.muscle_groups:
+            for muscle in mg.muscles:
+                if muscle.name == muscle_name:
+                    return mg.name
+        raise ValueError(f"Muscle {muscle_name} not found in the model")
+
     def remove_dofs(self, dofs_to_remove: list[str]):
         """
         Remove the degrees of freedom from the model
