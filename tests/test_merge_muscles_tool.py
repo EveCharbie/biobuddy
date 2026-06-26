@@ -13,6 +13,8 @@ from biobuddy import (
     SegmentReal,
     ViaPointReal,
 )
+from biobuddy.components.via_point_utils import PathPointCondition, PathPointMovement
+from biobuddy.components.functions import SimmSpline
 from test_utils import create_model_with_two_muscles, create_muscle
 
 # ---------- MuscleMerge init ----------
@@ -273,3 +275,121 @@ def test_get_muscle_muscle_group_name_not_found():
     model = create_model_with_two_muscles()
     with pytest.raises(ValueError, match="not found in the model"):
         model.get_muscle_muscle_group_name("ghost")
+
+
+# ---------- MergeMusclesTool raise conditions ----------
+
+
+def _add_conditional_via_point(muscle: MuscleReal, name: str) -> None:
+    vp = ViaPointReal(
+        name=name,
+        parent_name="seg_origin",
+        position=np.array([[0.0], [0.0], [0.0]]),
+        condition=PathPointCondition(dof_name="dof1", range_min=-1.0, range_max=1.0),
+    )
+    muscle.add_via_point(vp)
+
+
+def _add_moving_via_point(muscle: MuscleReal, name: str) -> None:
+    spline = SimmSpline(x_points=np.array([0.0, 1.0]), y_points=np.array([0.0, 1.0]))
+    vp = ViaPointReal(
+        name=name,
+        parent_name="seg_origin",
+        movement=PathPointMovement(
+            dof_names=["dof1", "dof2", "dof3"],
+            locations=[spline, spline, spline],
+        ),
+    )
+    muscle.add_via_point(vp)
+
+
+def test_merge_raises_conditional_via_point_on_first_muscle():
+    model = create_model_with_two_muscles()
+    _add_conditional_via_point(model.muscle_groups["grp"].muscles["m1"], "cond_vp")
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(NotImplementedError, match="Conditional via points not implemented"):
+        tool.merge()
+
+
+def test_merge_raises_moving_via_point_on_first_muscle():
+    model = create_model_with_two_muscles()
+    _add_moving_via_point(model.muscle_groups["grp"].muscles["m1"], "move_vp")
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(NotImplementedError, match="Moving via points not implemented"):
+        tool.merge()
+
+
+def test_merge_raises_mismatched_muscle_type():
+    model = create_model_with_two_muscles()
+    model.muscle_groups["grp"].muscles["m2"]._muscle_type = MuscleType.HILL_THELEN
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(ValueError, match="muscle type of the muscles is not all the same"):
+        tool.merge()
+
+
+def test_merge_raises_mismatched_state_type():
+    model = create_model_with_two_muscles()
+    model.muscle_groups["grp"].muscles["m2"]._state_type = MuscleStateType.BUCHANAN
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(ValueError, match="muscle state type of the muscles is not all the same"):
+        tool.merge()
+
+
+def test_merge_raises_mismatched_via_point_count():
+    pos = np.array([[0.0], [0.0], [0.0]])
+    model = create_model_with_two_muscles()
+    # m1 gets one via point, m2 gets none
+    model.muscle_groups["grp"].muscles["m1"].add_via_point(
+        ViaPointReal(name="vp_m1", parent_name="seg_origin", position=pos)
+    )
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(ValueError, match="not the same number of via points"):
+        tool.merge()
+
+
+def test_merge_raises_conditional_via_point_on_subsequent_muscle():
+    pos = np.array([[0.0], [0.0], [0.0]])
+    model = create_model_with_two_muscles()
+    # Both muscles need a via point so the count check passes, but m2's is conditional
+    model.muscle_groups["grp"].muscles["m1"].add_via_point(
+        ViaPointReal(name="vp_m1", parent_name="seg_origin", position=pos)
+    )
+    _add_conditional_via_point(model.muscle_groups["grp"].muscles["m2"], "cond_vp_m2")
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(NotImplementedError, match="Conditional via points not implemented"):
+        tool.merge()
+
+
+def test_merge_raises_moving_via_point_on_subsequent_muscle():
+    pos = np.array([[0.0], [0.0], [0.0]])
+    model = create_model_with_two_muscles()
+    model.muscle_groups["grp"].muscles["m1"].add_via_point(
+        ViaPointReal(name="vp_m1", parent_name="seg_origin", position=pos)
+    )
+    _add_moving_via_point(model.muscle_groups["grp"].muscles["m2"], "move_vp_m2")
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(NotImplementedError, match="Moving via points not implemented"):
+        tool.merge()
+
+
+def test_merge_raises_unmatched_via_point_parent():
+    pos = np.array([[0.0], [0.0], [0.0]])
+    model = create_model_with_two_muscles()
+    # m1 has a via point on seg_origin; m2 has one on seg_insertion — no common parent to match
+    model.muscle_groups["grp"].muscles["m1"].add_via_point(
+        ViaPointReal(name="vp_m1", parent_name="seg_origin", position=pos)
+    )
+    model.muscle_groups["grp"].muscles["m2"].add_via_point(
+        ViaPointReal(name="vp_m2", parent_name="seg_insertion", position=pos)
+    )
+    tool = MergeMusclesTool(model)
+    tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
+    with pytest.raises(ValueError, match="could not be matched with any via points"):
+        tool.merge()
