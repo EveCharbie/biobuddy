@@ -167,7 +167,7 @@ class MergeMusclesTool:
                     self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position
                 ]
                 if (
-                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
                     is not None
                 ):
                     optimal_length += [
@@ -201,6 +201,14 @@ class MergeMusclesTool:
                     ]
 
             # Add the new merged muscle
+            origin_position_value = np.mean(np.array(origin_position), axis=0)
+            insertion_position_value = np.mean(np.array(insertion_position), axis=0)
+            optimal_length_value = float(np.mean(optimal_length)) if optimal_length else None
+            maximal_force_value = float(np.sum(maximal_force)) if maximal_force else None
+            tendon_slack_length_value = float(np.mean(tendon_slack_length)) if tendon_slack_length else None
+            pennation_angle_value = float(np.mean(pennation_angle)) if pennation_angle else None
+            maximal_velocity_value = float(np.mean(maximal_velocity)) if maximal_velocity else None
+            maximal_excitation_value = float(np.mean(maximal_excitation)) if maximal_excitation else None
             self.merged_model.muscle_groups[muscle_group_name].add_muscle(
                 MuscleReal(
                     name=merge_task.name,
@@ -210,19 +218,19 @@ class MergeMusclesTool:
                     origin_position=ViaPointReal(
                         name=f"origin_{merge_task.name}",
                         parent_name=self.merged_model.muscle_groups[muscle_group_name].origin_parent_name,
-                        position=np.mean(np.array(origin_position), axis=0),
+                        position=origin_position_value,
                     ),
                     insertion_position=ViaPointReal(
                         name=f"insertion_{merge_task.name}",
                         parent_name=self.merged_model.muscle_groups[muscle_group_name].insertion_parent_name,
-                        position=np.mean(np.array(insertion_position), axis=0),
+                        position=insertion_position_value,
                     ),
-                    optimal_length=np.mean(np.array(optimal_length), axis=0),
-                    maximal_force=np.sum(np.array(maximal_force)),
-                    tendon_slack_length=np.mean(np.array(tendon_slack_length), axis=0),
-                    pennation_angle=np.mean(np.array(pennation_angle), axis=0),
-                    maximal_velocity=np.mean(np.array(maximal_velocity), axis=0),
-                    maximal_excitation=np.mean(np.array(maximal_excitation), axis=0),
+                    optimal_length=optimal_length_value,
+                    maximal_force=maximal_force_value,
+                    tendon_slack_length=tendon_slack_length_value,
+                    pennation_angle=pennation_angle_value,
+                    maximal_velocity=maximal_velocity_value,
+                    maximal_excitation=maximal_excitation_value,
                 )
             )
             for name, via in via_points.items():

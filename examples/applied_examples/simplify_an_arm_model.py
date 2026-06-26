@@ -286,7 +286,7 @@ def create_planar_model(
     # merge them together, you could do it using:
     # from biobuddy import MergeMusclesTool, MuscleMerge
     # merge_tool = MergeMusclesTool(model)
-    # merge_tool.add(MuscleMerge(name="new_model_name", muscle_names=["first_fascicle", "second_fascicle"]))
+    # merge_tool.add(MuscleMerge(name="new_muscle_name", muscle_names=["first_fascicle", "second_fascicle"]))
     # merged_model = merge_tool.merge()
     # The only constraints are that the origin, insertion and via points are defined on the same segments.
     # In that case, all properties of the muscle are the mean of fascicles except for maximal force which is the sum of fascicles

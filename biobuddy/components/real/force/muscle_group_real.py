@@ -1,9 +1,5 @@
-from copy import deepcopy
-import numpy as np
-
 from ....utils.named_list import NamedList
 from ..force.muscle_real import MuscleReal
-from ..force.via_point_real import ViaPointReal
 
 
 class MuscleGroupReal:
