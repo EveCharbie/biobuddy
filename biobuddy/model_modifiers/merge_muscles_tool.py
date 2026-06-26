@@ -13,8 +13,8 @@ _logger = logging.getLogger(__name__)
 class MuscleMerge:
     def __init__(self, name: str, muscle_names: list[str] | str):
         """
-        Initialize a segment merge configuration.
-        This is used to merge segments together in the model.
+        Initialize a muscle merge configuration.
+        This is used to merge muscles together in the model.
 
         Parameters
         ----------
