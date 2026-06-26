@@ -7,7 +7,6 @@ from ..components.real.force.muscle_real import MuscleReal
 from ..components.real.force.via_point_real import ViaPointReal
 from ..utils.named_list import NamedList
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -27,10 +26,13 @@ class MuscleMerge:
         if isinstance(muscle_names, str):
             muscle_names = [muscle_names]
         if not isinstance(muscle_names, list):
-            raise ValueError(f"add_muscles expects a list of the names of the muscles to merge together, got {muscle_names}.")
+            raise ValueError(
+                f"add_muscles expects a list of the names of the muscles to merge together, got {muscle_names}."
+            )
 
         self.name = name
         self.muscle_names = muscle_names
+
 
 class MergeMusclesTool:
     def __init__(
@@ -107,9 +109,15 @@ class MergeMusclesTool:
                     first_muscle = False
                 else:
                     # Other muscles
-                    if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_group != muscle_group_name:
+                    if (
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_group
+                        != muscle_group_name
+                    ):
                         raise ValueError(f"Muscle {muscle_name} does not belong to muscle group {muscle_group_name}")
-                    if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type != muscle_type:
+                    if (
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type
+                        != muscle_type
+                    ):
                         raise ValueError(
                             f"The muscle type of the muscles is not all the same, "
                             f"got {muscle_type} and {self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type}"
@@ -119,7 +127,9 @@ class MergeMusclesTool:
                             f"The muscle state type of the muscles is not all the same, "
                             f"got {state_type} and {self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].state_type}"
                         )
-                    if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].nb_via_points != len(via_points.keys()):
+                    if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].nb_via_points != len(
+                        via_points.keys()
+                    ):
                         raise ValueError(
                             f"The are not the same number of via points for the muscle {muscle_name} ({self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].nb_via_points}) and"
                             f"for the muscle {merge_task.muscle_names[0]} ({len(via_points.keys())})."
@@ -150,20 +160,45 @@ class MergeMusclesTool:
                         via_point_index = np.argmin(np.array(distance))
                         via_points[candidates[via_point_index]]["position"] += [via_point.position]
 
-                origin_position += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position]
-                insertion_position += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position]
-                if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position is not None:
-                    optimal_length += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length]
+                origin_position += [
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position
+                ]
+                insertion_position += [
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position
+                ]
+                if (
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position
+                    is not None
+                ):
+                    optimal_length += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
+                    ]
                 if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_force is not None:
-                    maximal_force += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_force]
-                if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].tendon_slack_length is not None:
-                    tendon_slack_length += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].tendon_slack_length]
+                    maximal_force += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_force
+                    ]
+                if (
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].tendon_slack_length
+                    is not None
+                ):
+                    tendon_slack_length += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].tendon_slack_length
+                    ]
                 if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].pennation_angle is not None:
-                    pennation_angle += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].pennation_angle]
+                    pennation_angle += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].pennation_angle
+                    ]
                 if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_velocity is not None:
-                    maximal_velocity += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_velocity]
-                if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_excitation is not None:
-                    maximal_excitation += [self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_excitation]
+                    maximal_velocity += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_velocity
+                    ]
+                if (
+                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_excitation
+                    is not None
+                ):
+                    maximal_excitation += [
+                        self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].maximal_excitation
+                    ]
 
             # Add the new merged muscle
             self.merged_model.muscle_groups[muscle_group_name].add_muscle(
