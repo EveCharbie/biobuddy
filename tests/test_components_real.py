@@ -2104,6 +2104,7 @@ def test_remove_muscles_without_segment_keeps_all_valid():
     assert "m1" in muscle_names
     assert "m2" in muscle_names
 
+
 def test_remove_muscles_without_segment():
     model = BiomechanicalModelReal()
     model.add_segment(SegmentReal(name="seg_origin"))
@@ -2122,4 +2123,3 @@ def test_remove_muscles_without_segment():
     muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
     assert "m_keep" in muscle_names
     assert "m_drop" not in muscle_names
-

@@ -587,6 +587,7 @@ def create_muscle(
         maximal_excitation=maximal_excitation,
     )
 
+
 def create_model_with_two_muscles(
     m1_origin=None,
     m1_insert=None,
@@ -610,6 +611,7 @@ def create_model_with_two_muscles(
     group.add_muscle(create_muscle("m2", m2_origin, m2_insert, "grp", **(m2_kw or {})))
     model.add_muscle_group(group)
     return model
+
 
 class MockEmptyC3dData(C3dData):
     def __init__(self):

@@ -15,7 +15,6 @@ from biobuddy import (
 )
 from test_utils import create_model_with_two_muscles, create_muscle
 
-
 # ---------- MuscleMerge init ----------
 
 
@@ -148,10 +147,20 @@ def test_merge_muscles_position_is_mean():
 
 def test_merge_muscles_scalars_are_mean():
     model = create_model_with_two_muscles(
-        m1_kw={"optimal_length": 0.1, "tendon_slack_length": 0.05, "pennation_angle": 0.0,
-               "maximal_velocity": 10.0, "maximal_excitation": 1.0},
-        m2_kw={"optimal_length": 0.3, "tendon_slack_length": 0.055, "pennation_angle": 0.5,
-               "maximal_velocity": 15.0, "maximal_excitation": 2.0},
+        m1_kw={
+            "optimal_length": 0.1,
+            "tendon_slack_length": 0.05,
+            "pennation_angle": 0.0,
+            "maximal_velocity": 10.0,
+            "maximal_excitation": 1.0,
+        },
+        m2_kw={
+            "optimal_length": 0.3,
+            "tendon_slack_length": 0.055,
+            "pennation_angle": 0.5,
+            "maximal_velocity": 15.0,
+            "maximal_excitation": 2.0,
+        },
     )
     tool = MergeMusclesTool(model)
     tool.add(MuscleMerge(name="merged", muscle_names=["m1", "m2"]))
