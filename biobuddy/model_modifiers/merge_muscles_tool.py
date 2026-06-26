@@ -166,10 +166,7 @@ class MergeMusclesTool:
                 insertion_position += [
                     self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position
                 ]
-                if (
-                    self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
-                    is not None
-                ):
+                if self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length is not None:
                     optimal_length += [
                         self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
                     ]
