@@ -28,7 +28,7 @@ from biobuddy import (
 from biobuddy.components.real.force.ligament_real import LigamentReal
 from biobuddy.components.ligament_utils import LigamentType
 from biobuddy.components.functions import SimmSpline
-from test_utils import MockC3dData, get_xml_str, read_xml_str
+from test_utils import MockC3dData, get_xml_str, read_xml_str, create_model_with_two_muscles, create_muscle
 
 
 # ------- MarkerReal ------- #
@@ -2058,114 +2058,51 @@ def test_remove_segment_chain_length():
     assert len(model.segments) == 2
 
 
-# ------- MuscleGroupReal.merge_muscles ------- #
+# ---------- remove_muscles_without_segment ----------
 
 
-def _make_muscle(
-    name: str,
-    origin_pos: np.ndarray,
-    insertion_pos: np.ndarray,
-    group_name: str,
-) -> MuscleReal:
-    origin = ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos)
-    insertion = ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos)
-    muscle = MuscleReal(
-        name=name,
-        muscle_type=MuscleType.HILL,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group=group_name,
-        origin_position=origin,
-        insertion_position=insertion,
-        optimal_length=0.1,
-        maximal_force=100.0,
-        tendon_slack_length=0.05,
-        pennation_angle=0.0,
-        maximal_velocity=10.0,
-        maximal_excitation=1.0,
-    )
-    return muscle
+def test_remove_muscles_without_segment_removes_bad_insertion():
+    model = create_model_with_two_muscles()
+    model.muscle_groups["grp"].muscles["m2"].insertion_position._parent_name = "ghost_segment"
+
+    model.remove_muscles_without_segment()
+
+    muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
+    assert "m1" in muscle_names
+    assert "m2" not in muscle_names
 
 
-def test_merge_muscles_basic():
-    group = MuscleGroupReal(
-        name="grp",
-        origin_parent_name="seg_origin",
-        insertion_parent_name="seg_insertion",
-    )
+def test_remove_muscles_without_segment_removes_bad_origin():
+    model = create_model_with_two_muscles()
+    model.muscle_groups["grp"].muscles["m1"].origin_position._parent_name = "ghost_segment"
+
+    model.remove_muscles_without_segment()
+
+    muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
+    assert "m2" in muscle_names
+    assert "m1" not in muscle_names
+
+
+def test_remove_muscles_without_segment_removes_bad_via_point():
     pos = np.array([[0.0], [0.0], [0.0]])
+    model = create_model_with_two_muscles()
+    vp = ViaPointReal(name="vp", parent_name="ghost_segment", position=pos)
+    model.muscle_groups["grp"].muscles["m1"].add_via_point(vp)
 
-    # First muscle
-    name = "m1"
-    origin_pos = pos
-    insertion_pos = pos + 1
-    muscle_1 = MuscleReal(
-        name=name,
-        muscle_type=MuscleType.HILL,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group="grp",
-        origin_position=ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos),
-        insertion_position=ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos),
-        optimal_length=0.1,
-        maximal_force=100.0,
-        tendon_slack_length=0.05,
-        pennation_angle=0.0,
-        maximal_velocity=10.0,
-        maximal_excitation=1.0,
-    )
-    muscle_1.add_via_point(ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.5))
-    muscle_1.add_via_point(ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos + 0.2))
+    model.remove_muscles_without_segment()
 
-    # Second muscle
-    name = "m2"
-    origin_pos = pos + 0.1
-    insertion_pos = pos + 1.1
-    muscle_2 = MuscleReal(
-        name=name,
-        muscle_type=MuscleType.HILL,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group="grp",
-        origin_position=ViaPointReal(name=f"origin_{name}", parent_name="seg_origin", position=origin_pos),
-        insertion_position=ViaPointReal(name=f"insertion_{name}", parent_name="seg_insertion", position=insertion_pos),
-        optimal_length=0.3,
-        maximal_force=110.0,
-        tendon_slack_length=0.055,
-        pennation_angle=0.5,
-        maximal_velocity=15.0,
-        maximal_excitation=2.0,
-    )
-    muscle_2.add_via_point(ViaPointReal(name=f"V1_{name}", parent_name="seg_origin", position=pos - 0.25))
-    muscle_2.add_via_point(ViaPointReal(name=f"V2_{name}", parent_name="seg_insertion", position=pos - 0.1))
-    group.add_muscle(muscle_1)
-    group.add_muscle(muscle_2)
-    group.merge_muscles(["m1", "m2"])
-
-    assert len(group.muscles) == 1
-    assert group.muscles[0].name == "m1_and_m2"
-    assert group.muscles[0].muscle_type == MuscleType.HILL
-    assert group.muscles[0].state_type == MuscleStateType.DEGROOTE
-    npt.assert_almost_equal(group.muscles[0].origin_position.position[:3], (pos + pos + 0.1) / 2)
-    npt.assert_almost_equal(group.muscles[0].insertion_position.position[:3], (pos + 1 + pos + 1.1) / 2)
-    assert group.muscles[0].optimal_length == (0.3 + 0.1) / 2
-    assert group.muscles[0].maximal_force == (110 + 100)
-    assert group.muscles[0].tendon_slack_length == (0.05 + 0.055) / 2
-    assert group.muscles[0].pennation_angle == (0.0 + 0.5) / 2
-    assert group.muscles[0].maximal_velocity == (15 + 10) / 2
-    assert group.muscles[0].maximal_excitation == (1 + 2) / 2
+    muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
+    assert "m2" in muscle_names
+    assert "m1" not in muscle_names
 
 
-def test_merge_muscles_wrong_group_raises():
-    group = MuscleGroupReal(name="grp", origin_parent_name="seg_origin", insertion_parent_name="seg_insertion")
-    pos = np.array([[0.0], [0.0], [0.0], [1.0]])
-    group.add_muscle(_make_muscle("m1", pos, pos, "grp"))
-    group.add_muscle(_make_muscle("m2", pos, pos, "grp"))
-    group.muscles["m2"]._muscle_group = "other_grp"
+def test_remove_muscles_without_segment_keeps_all_valid():
+    model = create_model_with_two_muscles()
+    model.remove_muscles_without_segment()
 
-    with pytest.raises(ValueError, match="does not belong to muscle group"):
-        group.merge_muscles(["m1", "m2"])
-
-
-# ------- BiomechanicalModelReal.remove_muscles_without_segment ------- #
-
+    muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
+    assert "m1" in muscle_names
+    assert "m2" in muscle_names
 
 def test_remove_muscles_without_segment():
     model = BiomechanicalModelReal()
@@ -2174,8 +2111,8 @@ def test_remove_muscles_without_segment():
 
     group = MuscleGroupReal(name="grp", origin_parent_name="seg_origin", insertion_parent_name="seg_insertion")
     pos = np.array([[0.0], [0.0], [0.0], [1.0]])
-    group.add_muscle(_make_muscle("m_keep", pos, pos, "grp"))
-    group.add_muscle(_make_muscle("m_drop", pos, pos, "grp"))
+    group.add_muscle(create_muscle("m_keep", pos, pos, "grp"))
+    group.add_muscle(create_muscle("m_drop", pos, pos, "grp"))
     # Redirect m_drop's insertion to a segment that will not exist
     group.muscles["m_drop"].insertion_position._parent_name = "ghost_segment"
     model.add_muscle_group(group)
@@ -2185,3 +2122,4 @@ def test_remove_muscles_without_segment():
     muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
     assert "m_keep" in muscle_names
     assert "m_drop" not in muscle_names
+

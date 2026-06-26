@@ -11,6 +11,8 @@ __all__ = [
     Score.__name__,
     Sara.__name__,
     JointCoordinateModifier.__name__,
+    MergeMusclesTool.__name__,
+    MuscleMerge.__name__,
     MergeSegmentsTool.__name__,
     SegmentMerge.__name__,
     ModifyKinematicChainTool.__name__,
