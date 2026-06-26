@@ -438,8 +438,8 @@ class ModelUtils:
                 child_segments = self.children_segment_names(segment.name)
                 for child_name in child_segments:
                     self.segments[child_name].parent_name = segment.parent_name
-                # Remove the segment
-                self.remove_segment(segment.name)
+                # Remove the segment (chain already fixed above)
+                self.remove_segment(segment.name, fix_kinematic_chain=False)
 
     def modify_model_static_pose(self, q_static: np.ndarray):
         from .real.rigidbody.segment_coordinate_system_real import (

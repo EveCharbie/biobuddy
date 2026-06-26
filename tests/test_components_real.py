@@ -2058,6 +2058,18 @@ def test_remove_segment_chain_length():
     assert len(model.segments) == 2
 
 
+def test_remove_segment_fix_kinematic_chain_true_reattaches():
+    model = _make_chain_model()
+    model.remove_segment("middle", fix_kinematic_chain=True)
+    assert model.segments["leaf"].parent_name == "root"
+
+
+def test_remove_segment_fix_kinematic_chain_false_leaves_orphan():
+    model = _make_chain_model()
+    model.remove_segment("middle", fix_kinematic_chain=False)
+    assert model.segments["leaf"].parent_name == "middle"
+
+
 # ---------- remove_muscles_without_segment ----------
 
 
