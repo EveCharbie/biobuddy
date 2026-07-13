@@ -54,7 +54,16 @@ jobs:
 
       - name: Set up Python
         run: |
-          conda install -cconda-forge python=3.11.11 pip 
+          conda install -cconda-forge python=3.11.11 pip
+
+      - name: Install system dependencies for building OpenSim
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build swig \
+            libblas-dev liblapack-dev \
+            freeglut3-dev libxi-dev libxmu-dev \
+            pkg-config
 
       - name: Install dependencies
         run: | 
@@ -66,7 +75,18 @@ jobs:
         run: |
           pip install pytest pytest-cov codecov
           conda install -c conda-forge deepdiff pinocchio pandas
-          conda install -c opensim-org opensim=4.5.1
+
+      - name: Build and install OpenSim from source
+        run: |
+          bash .github/workflows/install_opensim.sh "$CONDA_PREFIX"
+
+          OPENSIM_INSTALL="$(pwd)/opensim/opensim_core_install"
+          OPENSIM_PY_INIT=$(find "$OPENSIM_INSTALL" -path "*/opensim/__init__.py" | head -n1)
+          OPENSIM_PY_PKG_PARENT=$(dirname "$(dirname "$OPENSIM_PY_INIT")")
+          LIB_DIRS=$(find "$OPENSIM_INSTALL" -name "*.so*" -exec dirname {} \; | sort -u | paste -sd:)
+
+          echo "PYTHONPATH=$OPENSIM_PY_PKG_PARENT:$PYTHONPATH" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$LIB_DIRS:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
 
       - name: List conda packages
         run: conda list
