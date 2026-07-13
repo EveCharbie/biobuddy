@@ -60,10 +60,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build swig \
+            build-essential cmake ninja-build \
             libblas-dev liblapack-dev \
             freeglut3-dev libxi-dev libxmu-dev \
             pkg-config
+          pip install swig
 
       - name: Install dependencies
         run: | 
