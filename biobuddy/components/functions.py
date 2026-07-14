@@ -170,20 +170,19 @@ class SimmSpline(InterpolationFunction):
             self.c[i] = (self.c[i] - self.d[i] * self.c[i + 1]) / self.b[i]
 
         # Compute polynomial coefficients
-        self.b[nm1] = ((self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] + self.d[nm2] * (
-            self.c[nm2] + 2.0 * self.c[nm1]
-        )).reshape(-1)[0]
+        self.b[nm1] = (
+            (self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] + self.d[nm2] * (self.c[nm2] + 2.0 * self.c[nm1])
+        ).reshape(-1)[0]
 
         for i in range(nm1):
-            self.b[i] = ((self.y_points[i + 1] - self.y_points[i]) / self.d[i] - self.d[i] * (
-                self.c[i + 1] + 2.0 * self.c[i]
-            )).reshape(-1)[0]
+            self.b[i] = (
+                (self.y_points[i + 1] - self.y_points[i]) / self.d[i] - self.d[i] * (self.c[i + 1] + 2.0 * self.c[i])
+            ).reshape(-1)[0]
             self.d[i] = (self.c[i + 1] - self.c[i]) / self.d[i]
             self.c[i] *= 3.0
 
         self.c[nm1] *= 3.0
         self.d[nm1] = self.d[nm2]
-
 
     def get_coefficients(self):
         """Return the calculated coefficients."""
