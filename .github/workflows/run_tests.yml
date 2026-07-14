@@ -47,6 +47,18 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Free disk space
+        run: |
+          # Building OpenSim from source (Simbody + the full OpenSim/Moco
+          # tree) plus conda/biorbd needs more disk than the ~14GB free by
+          # default on GitHub runners. Remove large preinstalled toolchains
+          # we don't use to make room, otherwise the build (or even the
+          # earlier `git clone` of opensim-core) can silently run out of
+          # space and fail with an unrelated-looking error.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          df -h /
+
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -79,6 +91,7 @@ jobs:
 
       - name: Build and install OpenSim from source
         run: |
+          df -h /
           # Cap parallel compile jobs to the runner's core count: the script
           # defaults to 24 jobs, which OOM-kills the compiler on standard
           # (4-core) GitHub runners partway through the build.
