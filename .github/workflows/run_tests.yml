@@ -91,7 +91,6 @@ jobs:
 
       - name: Build and install OpenSim from source
         run: |
-          df -h /
           # Cap parallel compile jobs to the runner's core count: the script
           # defaults to 24 jobs, which OOM-kills the compiler on standard
           # (4-core) GitHub runners partway through the build.

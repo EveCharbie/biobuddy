@@ -17,10 +17,18 @@ if [ -d "$WORKING_DIR" ]; then
 fi
 mkdir -p "$WORKING_DIR"
 
-# Get opensim-core.
-git clone https://github.com/$ORG/opensim-core.git "$WORKING_DIR/opensim-core"
+# Get opensim-core. Fetch the pinned commit directly instead of cloning the
+# whole repo and checking it out afterwards: if that commit is later dropped
+# from whatever branch it was on (rebase/branch deletion upstream), a normal
+# clone stops including it and `git checkout $BRANCH` fails with "unable to
+# read tree", even though the commit object itself still exists and remains
+# directly fetchable by SHA.
+mkdir -p "$WORKING_DIR/opensim-core"
 cd "$WORKING_DIR/opensim-core"
-git checkout $BRANCH
+git init -q
+git remote add origin https://github.com/$ORG/opensim-core.git
+git fetch --depth 1 origin $BRANCH
+git checkout -q FETCH_HEAD
 
 # Build opensim-core dependencies.
 mkdir -p "$WORKING_DIR/opensim-core/dependencies/build"
