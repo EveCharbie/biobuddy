@@ -35,6 +35,37 @@ mkdir -p "$WORKING_DIR/opensim-core/dependencies/build"
 cd "$WORKING_DIR/opensim-core/dependencies/build"
 cmake "$WORKING_DIR/opensim-core/dependencies" -G"$GENERATOR" -DCMAKE_BUILD_TYPE=$DEBUG_TYPE -DCMAKE_INSTALL_PREFIX="$WORKING_DIR/opensim_dependencies_install/" -DSUPERBUILD_ezc3d=off -DOPENSIM_WITH_CASADI=$MOCO -DBUILD_PYTHON_WRAPPING=on -DPython3_ROOT_DIR="$PYTHON_ROOT_DIR"
 cmake . -LAH
+
+# opensim-core's own dependencies/CMakeLists.txt pins Simbody to a raw commit
+# on nickbianco's fork. That commit can become orphaned (unreachable from any
+# branch) if the fork gets rebased/cleaned up upstream, which makes
+# ExternalProject_Add's normal git clone fail with "reference is not a tree" /
+# "unable to read tree", even though the commit object itself still exists
+# and remains directly fetchable by SHA (same class of issue as the
+# opensim-core checkout above). Work around it the same way: fetch Simbody by
+# SHA ourselves into the exact source dir ExternalProject expects, then mark
+# its git-clone step as already done via the stamp file it checks, so the
+# build skips straight to configuring/building the pre-fetched source.
+SIMBODY_GIT_URL="https://github.com/nickbianco/simbody.git"
+SIMBODY_GIT_TAG="6cd18d8b8466b3e574377a6b5acd942af78c7a88"
+SIMBODY_SOURCE_DIR="$WORKING_DIR/opensim-core/dependencies/simbody"
+SIMBODY_STAMP_DIR="$WORKING_DIR/opensim-core/dependencies/build/simbody/stamp"
+
+rm -rf "$SIMBODY_SOURCE_DIR"
+mkdir -p "$SIMBODY_SOURCE_DIR"
+(
+    cd "$SIMBODY_SOURCE_DIR"
+    git init -q
+    git remote add origin "$SIMBODY_GIT_URL"
+    git fetch --depth 1 origin "$SIMBODY_GIT_TAG"
+    git checkout -q FETCH_HEAD
+    if [ -f .gitmodules ]; then
+        git submodule update --init --recursive
+    fi
+)
+cp "$SIMBODY_STAMP_DIR/simbody-gitinfo.txt" "$SIMBODY_STAMP_DIR/simbody-gitclone-lastrun.txt"
+touch "$SIMBODY_STAMP_DIR/simbody-gitclone-lastrun.txt"
+
 cmake --build . --config $DEBUG_TYPE -j$NUM_JOBS
 
 
