@@ -79,6 +79,10 @@ jobs:
 
       - name: Build and install OpenSim from source
         run: |
+          # Cap parallel compile jobs to the runner's core count: the script
+          # defaults to 24 jobs, which OOM-kills the compiler on standard
+          # (4-core) GitHub runners partway through the build.
+          export OPENSIM_BUILD_JOBS=$(nproc)
           bash .github/workflows/install_opensim.sh "$CONDA_PREFIX"
 
           OPENSIM_INSTALL="$(pwd)/opensim/opensim_core_install"
