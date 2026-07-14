@@ -179,7 +179,7 @@ class SimmSpline(InterpolationFunction):
             self.c[i] *= 3.0
 
         self.c[nm1] *= 3.0
-        self.d[nm1] = self.d[nm2]
+        self.d[nm1] = float(self.d[nm2])
 
     def get_coefficients(self):
         """Return the calculated coefficients."""
