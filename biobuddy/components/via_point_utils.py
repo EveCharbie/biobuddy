@@ -23,7 +23,7 @@ class PathPointMovement:
         """Evaluate the condition based on the current joint angles."""
         position = np.zeros((angles.shape[0],))
         for i_angle, angle in enumerate(angles):
-            position[i_angle] = self.locations[i_angle].evaluate(angle)
+            position[i_angle] = self.locations[i_angle].evaluate(float(angle))
         return position
 
 
