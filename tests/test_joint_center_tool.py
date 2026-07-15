@@ -1063,7 +1063,7 @@ def test_get_svd():
         decimal=3,
     )
 
-    # Fix the sign of each column of V, otherwise this would flip depending on the LAPACK backend even though the 
+    # Fix the sign of each column of V, otherwise this would flip depending on the LAPACK backend even though the
     # underlying subspace is identical.
     V_sign = V.copy()
     for i_col in range(V_sign.shape[1]):
